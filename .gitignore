@@ -212,3 +212,5 @@ logs/*
 !logs/.gitkeep
 models/*
 !models/.gitkeep
+videos/*
+!videos/.gitkeep
