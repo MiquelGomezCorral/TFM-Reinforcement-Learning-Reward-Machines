@@ -48,8 +48,8 @@ pip install -e .
 uv pip install ipykernel
 python -m ipykernel install --user --name=MY_env --display-name "MY_env (Conda)"
 ```
-### Dataset Source
-Link: Insert Link Here
+### References
+Inpired by https://arxiv.org/abs/2010.03950 and https://github.com/RodrigoToroIcarte/reward_machines
 
 *Maintained by [MiquelGomezCorral](https://miquelgc.net)*
 
@@ -97,8 +97,9 @@ pip install -e .
 uv pip install ipykernel
 python -m ipykernel install --user --name=MY_env --display-name "MY_env (Conda)"
 ```
-### Fuente dataset
-Link: Añade aquí el link a tu dataset
+### Referencias
+Inspirado por https://arxiv.org/abs/2010.03950 y https://github.com/RodrigoToroIcarte/reward_machines
+
 
 
 *Matenido por [MiquelGomezCorral](https://miquelgc.net)*
