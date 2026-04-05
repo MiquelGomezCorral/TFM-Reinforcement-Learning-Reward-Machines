@@ -40,7 +40,9 @@ class Configuration:
     # Environment parameters
     max_steps: int = 99         # Max steps per episode
     gamma: float = 0.95         # Discounting rate
-    eval_seed: list = None # The evaluation seed of the environment
+    eval_seed: list = None      # The evaluation seed of the environment
+    use_rm: bool = False        # Whether to use the RM or not
+    use_crm: bool = False       # Whether to use the CRM or not
 
     # Exploration parameters
     max_epsilon: float = 1.0    # Exploration probability at start
