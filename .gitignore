@@ -214,3 +214,5 @@ models/*
 !models/.gitkeep
 videos/*
 !videos/.gitkeep
+
+.vscode/*
