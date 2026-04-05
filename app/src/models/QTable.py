@@ -1,6 +1,5 @@
 import numpy as np
 from .RewardMachine import RewardMachine
-from src.envs import get_propositions
 
 class QTable:
     def __init__(self, CONFIG, env, rm_file: str = None):
@@ -58,7 +57,7 @@ class QTable:
         td_target = reward if done else reward + gamma * np.max(self.Qtable[target_u][new_state])
         self.Qtable[u][state][action] = old_q + learning_rate * (td_target - old_q)
 
-    def update(self, state, action, env_reward, new_state, gamma, learning_rate, env, use_crm=False):
+    def update(self, state, action, env_reward, new_state, gamma, learning_rate, env, get_propositions, use_crm=False):
         """Update the Q-table using the Q-learning update rule"""
         current_u = self.get_rm_state()
         

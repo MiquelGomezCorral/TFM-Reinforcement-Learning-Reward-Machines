@@ -5,8 +5,7 @@ import gymnasium as gym
 from src.config import Configuration
 from .QTable import QTable
 
-def train_qtable(CONFIG: Configuration, Qtable: QTable):
-  env = gym.make(CONFIG.gym_id, render_mode="rgb_array")
+def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env):
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
     # Reduce epsilon (because we need less and less exploration)
@@ -29,7 +28,10 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable):
       rm_done = Qtable.update(
           state, action, env_reward, new_state, 
           CONFIG.gamma, CONFIG.learning_rate, 
-          env, use_crm=CONFIG.use_crm  # Set to True when you want to enable CRM
+          env, 
+          get_propositions,
+          use_crm=CONFIG.use_crm,  # Set to True when you want to enable CRM
+          
       )
 
       # If terminated or truncated finish the episode

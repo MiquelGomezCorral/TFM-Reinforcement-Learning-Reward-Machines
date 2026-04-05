@@ -1,6 +1,6 @@
 
 
-def get_propositions(env, state):
+def get_propositions_taxi(env, state):
     """
     Looks at the state transition and returns a string of events that occurred.
     Passenger locations: 0=R, 1=G, 2=Y, 3=B, 4=in taxi

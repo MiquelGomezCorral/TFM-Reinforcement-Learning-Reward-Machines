@@ -19,7 +19,7 @@ class Configuration:
     LOGS_PATH: str = os.path.join("..", "logs")
     VIDEO_PATH: str = os.path.join("..", "videos")
 
-
+    rm_file: str = "rm_taxi.txt"
     # ===================================================================
     #                       PARAMETER
     # ===================================================================
