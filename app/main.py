@@ -6,12 +6,14 @@ from src.config import Configuration
 from maikol_utils.other_utils import args_to_dataclass
 from maikol_utils.print_utils import print_separator
 
-def cmd_read_extract(args: argparse.Namespace):
-    """Call read_extract_from_config_list with the given args."""
+from scripts import train_qt
+
+def cmd_train_qt(args: argparse.Namespace):
+    """Call train_qt with the given args."""
     CONFIG: Configuration = args_to_dataclass(args, Configuration)
-    print_separator("START ...", sep_type="START")
-    ...
-    print_separator("END ...", sep_type="START")
+    print_separator("START TRAIN QTABLE", sep_type="START")
+    train_qt(CONFIG)
+    print_separator("END TRAIN QTABLE", sep_type="START")
 
 def cmd_test(args):
     """Call test functions."""
@@ -24,22 +26,23 @@ if __name__ == "__main__":
     dotenv.load_dotenv()
 
     parser = argparse.ArgumentParser(prog="app", description="Main Application CLI")
+    parser.add_argument("--config", type=str, default="config.yaml", help="Name of the config file at configs/ (default: config.yaml)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
 
     subparsers = parser.add_subparsers(dest="function", required=True)
 
     # ======================================================================================
-    #                                       read_extract
+    #                                       Train QTable RM
     # ======================================================================================
-    p_read = subparsers.add_parser("read-extract", help="Read and extract from config list")
-    p_read.add_argument(
+    p_train = subparsers.add_parser("train-qrm", help="Train QTable with Reward Machines")
+    p_train.add_argument(
         "-d", "--dataset_name", type=str, default="Nuelas", help="Name of raw data folder"
     )
-    p_read.add_argument("-m", "--max_files", type=int, default=None, help="Max files to load")
-    p_read.add_argument(
+    p_train.add_argument("-m", "--max_files", type=int, default=None, help="Max files to load")
+    p_train.add_argument(
         "-l", "--use_llm", action="store_false", default=True, help="Disable LLM extraction"
     )
-    p_read.set_defaults(func=cmd_read_extract)
+    p_train.set_defaults(func=cmd_train_qt)
 
     # ======================================================================================
     #                                       test

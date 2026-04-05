@@ -18,6 +18,9 @@ class QTable:
         """
         self.Qtable = np.zeros((num_u_states, state_space, action_space))
 
+    def print_size(self):
+        print(f" - Q-Table size: {self.Qtable.shape}")
+
     def get_rm_state(self):
         return self.rm.get_current_state() if self.rm else 0
     
@@ -80,7 +83,7 @@ class QTable:
 
             # Advance actual RM state
             target_u, reward, done = self.step_rm(events)
-            
+        
         # Standard update for the current state
         self._update_q_value(
             current_u, state, action, reward, 

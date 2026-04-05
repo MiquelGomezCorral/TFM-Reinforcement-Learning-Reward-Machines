@@ -1,0 +1,25 @@
+# Default configuration for TFM project
+exp_name: "base_name"
+exp_description: "base_description"
+rm_file: "rm_taxi.txt"
+seed: 42
+gym_id: "Taxi-v3"
+video_fps: 1
+
+# Training parameters
+n_training_episodes: 10000  # Total training episodes
+learning_rate: 0.7  # Learning rate
+
+# Evaluation parameters
+n_eval_episodes: 100  # Total number of test episodes
+
+# Environment parameters
+max_steps: 99  # Max steps per episode
+gamma: 0.95  # Discounting rate
+use_rm: false  # Whether to use the RM or not
+use_crm: false  # Whether to use the CRM or not
+
+# Exploration parameters
+max_epsilon: 1.0  # Exploration probability at start
+min_epsilon: 0.05  # Minimum exploration probability
+decay_rate: 0.0005  # Exponential decay rate for exploration prob
