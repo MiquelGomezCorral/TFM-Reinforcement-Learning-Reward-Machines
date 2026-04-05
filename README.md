@@ -1,6 +1,11 @@
-# General Python Project Template
-
+# TFM: Reward Machines
 [English](#english) | [Español](#español)
+
+### Todos
+- Make more modular, mirar la función esta de get prepositions de ponerla en la Qtable o así
+
+
+
 
 ---
 

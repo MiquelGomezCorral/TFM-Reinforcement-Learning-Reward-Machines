@@ -6,6 +6,7 @@ from src.config import Configuration
 from .QTable import QTable
 
 def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env):
+  env = env if env else gym.make(CONFIG.gym_id, render_mode="rgb_array")
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
     # Reduce epsilon (because we need less and less exploration)

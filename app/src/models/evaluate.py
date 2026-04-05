@@ -6,7 +6,7 @@ from src.config import Configuration
 from .QTable import QTable
 
 
-def evaluate_agent(CONFIG: Configuration, qt: QTable, get_propositions: callable):
+def evaluate_agent(CONFIG: Configuration, qt: QTable, get_propositions: callable, env):
   """
   Evaluate the agent for ``n_eval_episodes`` episodes and returns average reward and std of reward.
   :param env: The evaluation environment
@@ -15,7 +15,7 @@ def evaluate_agent(CONFIG: Configuration, qt: QTable, get_propositions: callable
   :param Q: The Q-table
   :param seed: The evaluation seed array (for taxi-v3)
   """
-  env = gym.make(CONFIG.gym_id, render_mode="rgb_array")
+  env = env if env else gym.make(CONFIG.gym_id, render_mode="rgb_array")
 
   episode_rewards = []
   for episode in tqdm(range(CONFIG.n_eval_episodes)):
