@@ -84,7 +84,7 @@ class QTable:
         q_values[action] = q_values[action] + learning_rate * (reward + future - q_values[action])
         self._storage.set(u, state, q_values)
 
-    def update(self, state, action, env_reward, new_state, new_state_parse, gamma, learning_rate, env, get_propositions, use_crm=False):
+    def update(self, state, action, env_reward, new_state, new_state_parse, gamma, learning_rate, env, get_propositions, use_crm=False, skip_first_rm_state=False):
         current_u = self.get_rm_state()
         done = False
         target_u = current_u
@@ -95,10 +95,14 @@ class QTable:
 
             if use_crm:
                 for u in self.rm.states.keys():
+                    if skip_first_rm_state and u == 0:
+                        continue  # Skip the first RM state
                     t_u, r_u, d_u = self.rm.simulate_step(u, events)
                     self._update_q_value(u, state, action, r_u, t_u, new_state_parse, d_u, gamma, learning_rate)
 
             target_u, reward, done = self.step_rm(events)
+            # print(f"RM transition: {current_u} --{events}--> {target_u}, reward: {reward}, done: {done}")
+        else:
+            self._update_q_value(current_u, state, action, reward, target_u, new_state_parse, done, gamma, learning_rate)
 
-        self._update_q_value(current_u, state, action, reward, target_u, new_state_parse, done, gamma, learning_rate)
         return done

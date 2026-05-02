@@ -6,7 +6,7 @@ import gymnasium as gym
 from src.config import Configuration
 from .QTable import QTable
 
-def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env, parse_state: Callable = None, step_first_rm: bool = False):
+def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions: Callable, env, parse_state: Callable = None, skip_first_rm_state: bool = False):
   env = env if env else gym.make(CONFIG.gym_id, render_mode="rgb_array")
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
@@ -17,10 +17,10 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env, p
     Qtable.reset_rm()
     terminated, truncated= False, False
 
-    if step_first_rm:
+    if skip_first_rm_state:
       events = get_propositions(env, state)
       Qtable.step_rm(events)
-    state = parse_state(state) if parse_state else state
+    state = parse_state(env, state) if parse_state else state
 
     # Repeat
     for step in range(CONFIG.max_steps):
@@ -30,9 +30,9 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env, p
       # Take action At and observe Rt+1 and St+1
       # Take the action (a) and observe the outcome state(s') and reward (r)
       new_state, env_reward, terminated, truncated, info = env.step(action)
-      new_state_parse = parse_state(new_state) if parse_state else new_state
+      new_state_parse = parse_state(env, new_state) if parse_state else new_state
 
-      print(f"{state} --{action}--> {new_state_parse} | {new_state}, reward: {env_reward}")
+      # print(f"{state} --{action}--> {new_state_parse} | {new_state}, reward: {env_reward}")
       # Update Q(s,a)
       rm_done = Qtable.update(
           state, action, env_reward, new_state, new_state_parse, 
@@ -40,6 +40,7 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env, p
           env, 
           get_propositions,
           use_crm=CONFIG.use_crm,  # Set to True when you want to enable CRM
+          skip_first_rm_state=skip_first_rm_state
       )
 
       # If terminated or truncated finish the episode

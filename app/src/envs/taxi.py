@@ -30,9 +30,23 @@ def get_propositions_taxi(env, state):
 
     # 'p' is true as long as the passenger is in the taxi (index 4)
     if p_loc == 4:
-        props.append("p")
+        if p_loc == 0:
+            props.append("pr")
+        if p_loc == 1:
+            props.append("pg")
+        if p_loc == 2:
+            props.append("py")
+        if p_loc == 3:
+            props.append("pb")
     
-    if p_loc == destination:
-        props.append("d")
-    
+    # get_propositions_taxi
+    if p_loc == 0 and destination == 0:  # delivered to R
+        props.append("delr")
+    if p_loc == 1 and destination == 1:  # delivered to G
+        props.append("delg")
+    if p_loc == 2 and destination == 2:  # delivered to Y
+        props.append("dely")
+    if p_loc == 3 and destination == 3:  # delivered to B
+        props.append("delb")
+        
     return props
