@@ -1,94 +1,104 @@
 import numpy as np
 from .RewardMachine import RewardMachine
 
+class _StaticStorage:
+    def __init__(self, num_u_states, state_space, action_space):
+        self._table = np.zeros((num_u_states, state_space, action_space))
+
+    def get(self, u, state):
+        return self._table[u, state]       
+    
+    def set(self, u, state, values):
+        self._table[u, state] = values
+
+    def print_size(self):
+        print(f" - Q-Table size: {self._table.shape}")
+
+
+class _DynamicStorage:
+    def __init__(self, action_space):
+        self._table = {}
+        self._action_space = action_space
+
+    def _ensure(self, u, state):
+        key = (u, state) if not isinstance(state, np.ndarray) else (u, tuple(state))
+        if key not in self._table:
+            self._table[key] = np.zeros((self._action_space,))  # explicit shape tuple
+
+        # print(f"Ensured key: {key}, total entries: {len(self._table)}")
+        return key
+
+    def get(self, u, state):
+        key = self._ensure(u, state)
+        return self._table[key]
+
+    def set(self, u, state, values):
+        key = self._ensure(u, state)
+        self._table[key] = values
+
+    def print_size(self):
+        print(f" - Q-Table entries: {len(self._table)} (u, state) pairs")
+
+
 class QTable:
-    def __init__(self, CONFIG, env, rm_file: str = None):
+    def __init__(self, CONFIG, env, rm_file: str = None, dynamic: bool = True):
         self.CONFIG = CONFIG
         self.rm = RewardMachine(self.CONFIG, rm_file) if rm_file else None
 
-        self.initialize_q_table(
-            self.rm.get_num_states() if self.rm else 1,
-            env.observation_space.n, 
-            env.action_space.n
-        )
+        num_u = self.rm.get_num_states() if self.rm else 1
+        action_space = env.action_space.n
 
-    def initialize_q_table(self, num_u_states, state_space, action_space):
-        """
-        Is not a matrix, is an array and we can locate each game cell later with `current_row * ncols + current_col`
-        """
-        self.Qtable = np.zeros((num_u_states, state_space, action_space))
+        if dynamic:
+            self._storage = _DynamicStorage(action_space)
+        else:
+            self._storage = _StaticStorage(num_u, env.observation_space.n, action_space)
 
     def print_size(self):
-        print(f" - Q-Table size: {self.Qtable.shape}")
+        self._storage.print_size()
 
     def get_rm_state(self):
         return self.rm.get_current_state() if self.rm else 0
-    
+
     def step_rm(self, events):
         if self.rm:
             return self.rm.step(events)
         return 0, 0, False
-    
+
     def reset_rm(self):
         if self.rm:
             self.rm.reset()
 
-    def greedy_policy(self, state, u = None):
-        """Take the action with the highest value given a state
-        """
+    def greedy_policy(self, state, u=None):
         if u is None:
             u = self.get_rm_state()
-
-        action = np.argmax(self.Qtable[u][state][:])
-        return action
+        return int(np.argmax(self._storage.get(u, state)))
 
     def epsilon_greedy_policy(self, state, epsilon, env):
-        """Take the action with the highest value given a state with a probability of 1-epsilon, otherwise take a random action
-        """
-        random_num = np.random.random()
-
-        if random_num > epsilon:
-            action = self.greedy_policy(state)
-        else:
-            action = env.action_space.sample() 
-
-        return action
+        if np.random.random() > epsilon:
+            return self.greedy_policy(state)
+        return env.action_space.sample()
 
     def _update_q_value(self, u, state, action, reward, target_u, new_state, done, gamma, learning_rate):
-        """Helper to apply the Bellman equation to a specific RM state table."""
-        old_q = self.Qtable[u][state][action]
-        td_target = reward if done else reward + gamma * np.max(self.Qtable[target_u][new_state])
-        self.Qtable[u][state][action] = old_q + learning_rate * (td_target - old_q)
+        q_values = self._storage.get(u, state).copy()
+        future = 0 if done else gamma * np.max(self._storage.get(target_u, new_state))
+        q_values[action] = q_values[action] + learning_rate * (reward + future - q_values[action])
+        self._storage.set(u, state, q_values)
 
-    def update(self, state, action, env_reward, new_state, gamma, learning_rate, env, get_propositions, use_crm=False):
-        """Update the Q-table using the Q-learning update rule"""
+    def update(self, state, action, env_reward, new_state, new_state_parse, gamma, learning_rate, env, get_propositions, use_crm=False):
         current_u = self.get_rm_state()
-        
         done = False
         target_u = current_u
         reward = env_reward
 
         if self.rm:
             events = get_propositions(env, new_state)
-            
-            # CRM logic toggle 
+
             if use_crm:
                 for u in self.rm.states.keys():
                     t_u, r_u, d_u = self.rm.simulate_step(u, events)
-                    self._update_q_value(
-                        u, state, action, r_u, 
-                        t_u, new_state, d_u, 
-                        gamma, learning_rate
-                    )
+                    self._update_q_value(u, state, action, r_u, t_u, new_state_parse, d_u, gamma, learning_rate)
 
-            # Advance actual RM state
             target_u, reward, done = self.step_rm(events)
-        
-        # Standard update for the current state
-        self._update_q_value(
-            current_u, state, action, reward, 
-            target_u, new_state, 
-            done, gamma, learning_rate
-        )
 
+        self._update_q_value(current_u, state, action, reward, target_u, new_state_parse, done, gamma, learning_rate)
         return done

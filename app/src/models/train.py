@@ -1,3 +1,4 @@
+from typing import Callable
 import numpy as np
 from tqdm import tqdm
 
@@ -5,7 +6,7 @@ import gymnasium as gym
 from src.config import Configuration
 from .QTable import QTable
 
-def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env):
+def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env, parse_state: Callable = None, step_first_rm: bool = False):
   env = env if env else gym.make(CONFIG.gym_id, render_mode="rgb_array")
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
@@ -16,6 +17,11 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env):
     Qtable.reset_rm()
     terminated, truncated= False, False
 
+    if step_first_rm:
+      events = get_propositions(env, state)
+      Qtable.step_rm(events)
+    state = parse_state(state) if parse_state else state
+
     # Repeat
     for step in range(CONFIG.max_steps):
       # Choose the action At using epsilon greedy policy
@@ -24,15 +30,16 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env):
       # Take action At and observe Rt+1 and St+1
       # Take the action (a) and observe the outcome state(s') and reward (r)
       new_state, env_reward, terminated, truncated, info = env.step(action)
+      new_state_parse = parse_state(new_state) if parse_state else new_state
 
+      print(f"{state} --{action}--> {new_state_parse} | {new_state}, reward: {env_reward}")
       # Update Q(s,a)
       rm_done = Qtable.update(
-          state, action, env_reward, new_state, 
+          state, action, env_reward, new_state, new_state_parse, 
           CONFIG.gamma, CONFIG.learning_rate, 
           env, 
           get_propositions,
           use_crm=CONFIG.use_crm,  # Set to True when you want to enable CRM
-          
       )
 
       # If terminated or truncated finish the episode
@@ -40,6 +47,6 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions, env):
         break
 
       # Our next state is the new state
-      state = new_state
+      state = new_state_parse
 
   return Qtable
