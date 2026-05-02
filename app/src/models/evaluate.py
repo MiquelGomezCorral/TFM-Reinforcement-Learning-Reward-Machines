@@ -28,20 +28,27 @@ def evaluate_agent(CONFIG: Configuration, qt: QTable, get_propositions: callable
     terminated, truncated = False, False
     total_rewards_ep = 0
 
+    if CONFIG.skip_first_rm_state:
+      events = get_propositions(env, state)
+      qt.step_rm(events)
+    state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
+
     for step in range(CONFIG.max_steps):
       # Take the action (index) that have the maximum expected future reward given that state
       action = qt.greedy_policy(state)
-      new_state, reward, terminated, truncated, info = env.step(action)
+      state, reward, terminated, truncated, info = env.step(action)
       total_rewards_ep += reward
 
       rm_done = False
       if qt.rm:
-        events = get_propositions(env, new_state)
+        events = get_propositions(env, state)
         _, _, rm_done = qt.step_rm(events)
 
       if terminated or truncated or rm_done:
         break
-      state = new_state
+
+      state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
+      
     episode_rewards.append(total_rewards_ep)
   mean_reward = np.mean(episode_rewards)
   std_reward = np.std(episode_rewards)

@@ -6,7 +6,7 @@ import gymnasium as gym
 from src.config import Configuration
 from .QTable import QTable
 
-def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions: Callable, env, parse_state: Callable = None, skip_first_rm_state: bool = False):
+def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions: Callable, env):
   env = env if env else gym.make(CONFIG.gym_id, render_mode="rgb_array")
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
@@ -17,10 +17,10 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions: Callab
     Qtable.reset_rm()
     terminated, truncated= False, False
 
-    if skip_first_rm_state:
+    if CONFIG.skip_first_rm_state:
       events = get_propositions(env, state)
       Qtable.step_rm(events)
-    state = parse_state(env, state) if parse_state else state
+    state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
 
     # Repeat
     for step in range(CONFIG.max_steps):
@@ -30,7 +30,7 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions: Callab
       # Take action At and observe Rt+1 and St+1
       # Take the action (a) and observe the outcome state(s') and reward (r)
       new_state, env_reward, terminated, truncated, info = env.step(action)
-      new_state_parse = parse_state(env, new_state) if parse_state else new_state
+      new_state_parse = CONFIG.parse_state(env, new_state) if CONFIG.parse_state else new_state
 
       # print(f"{state} --{action}--> {new_state_parse} | {new_state}, reward: {env_reward}")
       # Update Q(s,a)
@@ -40,7 +40,7 @@ def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions: Callab
           env, 
           get_propositions,
           use_crm=CONFIG.use_crm,  # Set to True when you want to enable CRM
-          skip_first_rm_state=skip_first_rm_state
+          skip_first_rm_state=CONFIG.skip_first_rm_state
       )
 
       # If terminated or truncated finish the episode

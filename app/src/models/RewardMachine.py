@@ -25,7 +25,7 @@ class RewardMachine:
             u, u_next, condition, reward = line.split(';')
             u, u_next, condition, reward = (
                 int(u), int(u_next), 
-                tuple(condition.strip().split(',')), 
+                tuple(c.strip() for c in condition.strip().split(',')), 
                 float(reward)
             )
 

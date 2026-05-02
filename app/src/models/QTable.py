@@ -6,6 +6,8 @@ class _StaticStorage:
         self._table = np.zeros((num_u_states, state_space, action_space))
 
     def get(self, u, state):
+        # print(f'{u = }')
+        # print(f'{state = }')
         return self._table[u, state]       
     
     def set(self, u, state, values):
@@ -43,6 +45,7 @@ class _DynamicStorage:
 class QTable:
     def __init__(self, CONFIG, env, rm_file: str = None, dynamic: bool = True):
         self.CONFIG = CONFIG
+        print(f'The QTable is {'dynamic' if dynamic else 'static'}')
         self.rm = RewardMachine(self.CONFIG, rm_file) if rm_file else None
 
         num_u = self.rm.get_num_states() if self.rm else 1
@@ -81,6 +84,8 @@ class QTable:
     def _update_q_value(self, u, state, action, reward, target_u, new_state, done, gamma, learning_rate):
         q_values = self._storage.get(u, state).copy()
         future = 0 if done else gamma * np.max(self._storage.get(target_u, new_state))
+        # print(q_values.shape)
+        # print(q_values)
         q_values[action] = q_values[action] + learning_rate * (reward + future - q_values[action])
         self._storage.set(u, state, q_values)
 
@@ -93,14 +98,16 @@ class QTable:
         if self.rm:
             events = get_propositions(env, new_state)
 
+            target_u, reward, done = self.step_rm(events)
             if use_crm:
                 for u in self.rm.states.keys():
                     if skip_first_rm_state and u == 0:
                         continue  # Skip the first RM state
                     t_u, r_u, d_u = self.rm.simulate_step(u, events)
                     self._update_q_value(u, state, action, r_u, t_u, new_state_parse, d_u, gamma, learning_rate)
-
-            target_u, reward, done = self.step_rm(events)
+            else:
+                self._update_q_value(current_u, state, action, reward, target_u, new_state_parse, done, gamma, learning_rate)
+            
             # print(f"RM transition: {current_u} --{events}--> {target_u}, reward: {reward}, done: {done}")
         else:
             self._update_q_value(current_u, state, action, reward, target_u, new_state_parse, done, gamma, learning_rate)

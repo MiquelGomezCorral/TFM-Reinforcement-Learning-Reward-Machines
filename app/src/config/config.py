@@ -5,6 +5,7 @@ everywhere and considered configuration.
 """
 import os
 from dataclasses import dataclass
+from typing import Callable
 
 from maikol_utils.file_utils import make_dirs
 import yaml
@@ -46,6 +47,9 @@ class Configuration:
     eval_seed: list = None      # The evaluation seed of the environment
     use_rm: bool = False        # Whether to use the RM or not
     use_crm: bool = False       # Whether to use the CRM or not
+    skip_first_rm_state: bool = False
+    parse_state: Callable = None
+    dynamic_qtable: bool = True
 
     # Exploration parameters
     max_epsilon: float = 1.0    # Exploration probability at start
