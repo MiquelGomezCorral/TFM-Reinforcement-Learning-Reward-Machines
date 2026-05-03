@@ -1,13 +1,16 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+import pygame # New import
+
 
 class MultiTaxiEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, grid_size=5, num_passengers=2):
+    def __init__(self, grid_size=5, num_passengers=2, render_mode=None): # Updated signature
         self.grid_size = grid_size
         self.num_passengers = num_passengers
+        self.render_mode = render_mode # New
 
         if grid_size == 5:
             self.locs = [(0, 0), (0, 4), (4, 0), (4, 3)]
@@ -16,13 +19,17 @@ class MultiTaxiEnv(gym.Env):
         else:
             raise ValueError("grid_size must be 5 or 10")
 
-        # State bounds: [taxi_r, taxi_c] + [p_loc, p_dest] * num_passengers
-        # p_loc: 0-3 (locations), 4 (in taxi) | p_dest: 0-3 (locations)
         self.state_bounds = [grid_size, grid_size] + [5, 4] * num_passengers
-        
-        self.observation_space = spaces.Discrete(np.prod(self.state_bounds))
-        self.action_space = spaces.Discrete(6) # 0:S, 1:N, 2:E, 3:W, 4:Pickup, 5:Dropoff
+        self.observation_space = spaces.Discrete(int(np.prod(self.state_bounds)))
+        self.action_space = spaces.Discrete(6)
         self.state = None
+        
+        # Pygame variables (lazy init in render)
+        self.window_size = 512
+        self.cell_size = self.window_size // self.grid_size
+        self.window = None
+        self.clock = None
+        self.p_colors = [(255, 0, 0), (0, 0, 255), (255, 165, 0), (128, 0, 128), (0, 255, 255)]
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -51,30 +58,32 @@ class MultiTaxiEnv(gym.Env):
         elif action == 2 and taxi_c < self.grid_size - 1: taxi_c += 1
         elif action == 3 and taxi_c > 0: taxi_c -= 1
         
-        elif action == 4: # Pickup
+        # Inside the step(self, action) method
+        elif action == 4:
             picked_up = False
             for i in range(self.num_passengers):
                 p_loc = passengers[i*2]
-                if p_loc < 4 and (taxi_r, taxi_c) == self.locs[p_loc]:
+                p_dest = passengers[i*2+1] # Added destination check
+                
+                # Check that they are not already at their destination!
+                if p_loc < 4 and p_loc != p_dest and (taxi_r, taxi_c) == self.locs[p_loc]:
                     passengers[i*2] = 4
                     picked_up = True
-                    break 
             if not picked_up: reward = -10
             
-        elif action == 5: # Dropoff
+        elif action == 5:
             dropped_off = False
             for i in range(self.num_passengers):
                 p_loc, p_dest = passengers[i*2], passengers[i*2+1]
                 if p_loc == 4 and (taxi_r, taxi_c) == self.locs[p_dest]:
                     passengers[i*2] = p_dest 
                     dropped_off = True
-                    reward = 20
-                    break
-            if not dropped_off: reward = -10
+            if dropped_off:
+                reward = 20
+            else:
+                reward = -10
 
         self.state = [taxi_r, taxi_c] + passengers
-        
-        # Terminate if all passengers are at their destinations
         terminated = all(passengers[i*2] == passengers[i*2+1] for i in range(self.num_passengers))
         
         return self.encode(self.state), reward, terminated, False, {}
@@ -86,30 +95,61 @@ class MultiTaxiEnv(gym.Env):
         return list(np.unravel_index(state_int, self.state_bounds))
     
     def render(self):
+        if self.render_mode is None:
+            return
+
+        if self.window is None:
+            pygame.init()
+            if self.render_mode == "human":
+                self.window = pygame.display.set_mode((self.window_size, self.window_size))
+            else:
+                self.window = pygame.Surface((self.window_size, self.window_size))
+            self.clock = pygame.time.Clock()
+
+        canvas = pygame.Surface((self.window_size, self.window_size))
+        canvas.fill((255, 255, 255)) # White background
+
         taxi_r, taxi_c = self.state[0], self.state[1]
         passengers = self.state[2:]
-        
-        print("-" * (self.grid_size * 2 + 1))
-        for r in range(self.grid_size):
-            row_str = "|"
-            for c in range(self.grid_size):
-                cell = " "
-                
-                # 1. Mark Destinations (Magenta D) and Waiting Passengers (Blue P)
-                for i in range(self.num_passengers):
-                    p_loc, p_dest = passengers[i*2], passengers[i*2+1]
-                    if (r, c) == self.locs[p_dest]:
-                        cell = "\033[95mD\033[0m" 
-                    if p_loc < 4 and (r, c) == self.locs[p_loc]:
-                        cell = "\033[94mP\033[0m"
-                
-                # 2. Mark Taxi (Yellow T empty, Green X if carrying someone)
-                if (r, c) == (taxi_r, taxi_c):
-                    if any(passengers[i*2] == 4 for i in range(self.num_passengers)):
-                        cell = "\033[92mX\033[0m" 
-                    else:
-                        cell = "\033[93mT\033[0m" 
-                        
-                row_str += cell + "|"
-            print(row_str)
-        print("-" * (self.grid_size * 2 + 1) + "\n")
+        cs = self.cell_size
+
+        # Draw Destinations (Unique color, smaller nested squares if overlapping)
+        for i in range(self.num_passengers):
+            dr, dc = self.locs[passengers[i*2+1]]
+            color = self.p_colors[i % len(self.p_colors)]
+            inset = 10 + (i * 4) 
+            pygame.draw.rect(canvas, color, pygame.Rect(dc*cs + inset, dr*cs + inset, cs - 2*inset, cs - 2*inset), 3)
+
+        # Draw Passengers (Unique color, spaced side-by-side)
+        for i in range(self.num_passengers):
+            p_loc = passengers[i*2]
+            color = self.p_colors[i % len(self.p_colors)]
+            if p_loc < 4:
+                pr, pc = self.locs[p_loc]
+                spacing = cs // (self.num_passengers + 1)
+                px = pc * cs + spacing * (i + 1)
+                py = pr * cs + cs // 2
+                pygame.draw.circle(canvas, color, (px, py), cs // 6)
+        # Draw Taxi (Yellow if empty, Green if full)
+        taxi_full = any(passengers[i*2] == 4 for i in range(self.num_passengers))
+        taxi_color = (0, 255, 0) if taxi_full else (255, 255, 0)
+        pygame.draw.rect(canvas, taxi_color, pygame.Rect(taxi_c*cs + 15, taxi_r*cs + 15, cs - 30, cs - 30))
+
+        # Draw Grid Lines
+        for x in range(0, self.window_size + 1, cs):
+            pygame.draw.line(canvas, (200, 200, 200), (x, 0), (x, self.window_size))
+            pygame.draw.line(canvas, (200, 200, 200), (0, x), (self.window_size, x))
+
+        if self.render_mode == "human":
+            self.window.blit(canvas, canvas.get_rect())
+            pygame.event.pump()
+            pygame.display.update()
+            self.clock.tick(self.metadata["render_fps"])
+        elif self.render_mode == "rgb_array":
+            return np.transpose(np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2))
+
+    def close(self):
+        if self.window is not None:
+            pygame.quit()
+            self.window = None
+            self.clock = None

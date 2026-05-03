@@ -24,11 +24,15 @@ def record_video(CONFIG: Configuration, qt: QTable, env, get_propositions: calla
       qt.step_rm(events)
   state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
 
-  while not terminated and not truncated:
+  i = 0
+
+  while not terminated and not truncated and i < 100:
+    i+=1
     # Take the action (index) that have the maximum expected future reward given that state
     action = qt.greedy_policy(state)
     state, reward, terminated, truncated, info = env.step(action) # We directly put next_state = state for recording logic
-    qt.step_rm(get_propositions(env, state))
+    if CONFIG.use_rm:
+      qt.step_rm(get_propositions(env, state))
     
     state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
     

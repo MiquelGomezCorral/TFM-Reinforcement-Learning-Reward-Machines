@@ -212,7 +212,7 @@ logs/*
 !logs/.gitkeep
 models/*
 !models/.gitkeep
-videos/*
+# videos/*
 !videos/.gitkeep
 
 .vscode/*
