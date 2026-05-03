@@ -70,7 +70,7 @@ class MultiTaxiEnv(gym.Env):
                     passengers[i*2] = 4
                     picked_up = True
             if not picked_up: reward = -10
-            
+
         elif action == 5:
             dropped_off = False
             for i in range(self.num_passengers):
@@ -120,6 +120,11 @@ class MultiTaxiEnv(gym.Env):
             inset = 10 + (i * 4) 
             pygame.draw.rect(canvas, color, pygame.Rect(dc*cs + inset, dr*cs + inset, cs - 2*inset, cs - 2*inset), 3)
 
+        # Draw Taxi (Yellow if empty, Green if full)
+        taxi_full = any(passengers[i*2] == 4 for i in range(self.num_passengers))
+        taxi_color = (0, 255, 0) if taxi_full else (255, 255, 0)
+        pygame.draw.rect(canvas, taxi_color, pygame.Rect(taxi_c*cs + 15, taxi_r*cs + 15, cs - 30, cs - 30))
+
         # Draw Passengers (Unique color, spaced side-by-side)
         for i in range(self.num_passengers):
             p_loc = passengers[i*2]
@@ -130,10 +135,6 @@ class MultiTaxiEnv(gym.Env):
                 px = pc * cs + spacing * (i + 1)
                 py = pr * cs + cs // 2
                 pygame.draw.circle(canvas, color, (px, py), cs // 6)
-        # Draw Taxi (Yellow if empty, Green if full)
-        taxi_full = any(passengers[i*2] == 4 for i in range(self.num_passengers))
-        taxi_color = (0, 255, 0) if taxi_full else (255, 255, 0)
-        pygame.draw.rect(canvas, taxi_color, pygame.Rect(taxi_c*cs + 15, taxi_r*cs + 15, cs - 30, cs - 30))
 
         # Draw Grid Lines
         for x in range(0, self.window_size + 1, cs):

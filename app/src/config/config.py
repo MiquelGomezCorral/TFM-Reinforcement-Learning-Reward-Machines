@@ -32,7 +32,7 @@ class Configuration:
     exp_description: str = "base_description"
     seed:     int = 42
     gym_id: str = "Taxi-v3"
-    video_fps: int = 1
+    video_fps: int = 10
 
     # Training parameters
     n_training_episodes: int = 10000  # Total training episodes

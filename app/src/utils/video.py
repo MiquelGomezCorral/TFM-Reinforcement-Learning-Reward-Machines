@@ -26,7 +26,7 @@ def record_video(CONFIG: Configuration, qt: QTable, env, get_propositions: calla
 
   i = 0
 
-  while not terminated and not truncated and i < 100:
+  while not terminated and not truncated and i < CONFIG.max_steps:
     i+=1
     # Take the action (index) that have the maximum expected future reward given that state
     action = qt.greedy_policy(state)
@@ -44,4 +44,4 @@ def record_video(CONFIG: Configuration, qt: QTable, env, get_propositions: calla
   else:
     path = os.path.join(CONFIG.VIDEO_PATH, f"{CONFIG.exp_description}_{CONFIG.gym_id}.gif")
     
-  imageio.mimsave(path, [np.array(img) for i, img in enumerate(images)], fps=CONFIG.video_fps)
+  imageio.mimsave(path, [np.array(img) for i, img in enumerate(images)], fps=3)
