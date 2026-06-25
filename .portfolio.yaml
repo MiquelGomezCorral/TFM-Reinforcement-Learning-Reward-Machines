@@ -12,6 +12,35 @@ descriptionLong:
     Trabajo de Fin de Máster inspirado en el paper 'Reward Machines: Exploiting Reward Function Structure in Reinforcement Learning' (arXiv:2010.03950) y el repositorio de Rodrigo Toro Icarte. Implementa Q-Learning tabular donde la Q-table se indexa por (estado_RM, estado_entorno) en lugar de solo estado_entorno. La Reward Machine es un autómata finito determinista cargado desde archivos .txt que definen las transiciones con condiciones proposicionales (ej: 'p' = pasajero recogido, 'd' = entregado, con negaciones '!p'). Soporta CRM: cuando el agente incumple una proposición, se generan experiencias contrafactuales para acelerar el aprendizaje. Entornos usados: Taxi-v3 (Gymnasium) con 500 estados, un MultiTaxiEnv propio con 2 pasajeros y espacio de estados dinámico (hasta ~10000), y MiniGrid-DoorKey-5x5. Q-Table con almacenamiento dinámico (solo guarda pares visitados). Benchmark con 5 variantes comparando convergencia y recompensa media. Incluye grabación de vídeos GIF de las políticas aprendidas.
 technologies: [python, jupyter, numpy, reinforcement-learning]
 tags: [class]
+logo: videos/base_description_Taxi-v3.gif
+screenShoots:
+  - videos/base_description_Taxi-v3.gif
+  - videos/farming.gif
+  - videos/rm_doorkey.txt_qtable_video.gif
+  - videos/rm_taxi.txt_2-p2-normal_qtable_video.gif
+  - videos/rm_taxi.txt_2-p2_qtable_video.gif
+  - videos/rm_taxi.txt_2_qtable_video.gif
+  - videos/rm_taxi.txt_p2-normal_qtable_video.gif
+  - videos/rm_taxi.txt_qtable_video.gif
+  - videos/rm_taxi_2p.txt-0.gif
+  - videos/rm_taxi_2p.txt-1.gif
+  - videos/rm_taxi_2p.txt-2-0.gif
+  - videos/rm_taxi_2p.txt-2-1.gif
+  - videos/rm_taxi_2p.txt-2-2.gif
+  - videos/rm_taxi_2p.txt-2-3.gif
+  - videos/rm_taxi_2p.txt-2-4.gif
+  - videos/rm_taxi_2p.txt-2.gif
+  - videos/rm_taxi_2p.txt-3.gif
+  - videos/rm_taxi_2p.txt-4.gif
+  - videos/rm_taxi_2p.txt-p-0.gif
+  - videos/rm_taxi_2p.txt-p-1.gif
+  - videos/rm_taxi_2p.txt-p-2.gif
+  - videos/rm_taxi_2p.txt-p-3.gif
+  - videos/rm_taxi_2p.txt-p-4.gif
+  - videos/rm_taxi_v2.txt_qtable_video.gif
+  - videos/rm_taxi_v2.txt_qtable_video_static.gif
+  - videos/taxi_qtable_video.gif
 slug: TFM-Reinforcement-Learning-Reward-Machines
 order: 92
 featured: false
+
