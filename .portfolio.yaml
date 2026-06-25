@@ -1,6 +1,6 @@
 title:
-  en: Q-Learning with Reward Machines and CRM for Non-Markovian Tasks
-  es: Q-Learning con Reward Machines y CRM para Tareas No-Markovianas
+  en: "TFM: Q-Learning with Reward Machines and CRM for Non-Markovian Tasks"
+  es: "TFM: Q-Learning con Reward Machines y CRM para Tareas No-Markovianas"
 finished: progress
 descriptionShort:
   en: "Master's thesis implementing tabular Q-Learning augmented with Reward Machines (reward automata) and Counterfactual Reward Machines (CRM). Environments: Taxi-v3, MultiTaxi (2 passengers), MiniGrid-DoorKey. Benchmarks 5 variants (no RM, RM only, RM+CRM, improved versions)."
