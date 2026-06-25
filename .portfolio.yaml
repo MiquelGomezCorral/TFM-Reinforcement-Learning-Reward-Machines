@@ -10,7 +10,7 @@ descriptionLong:
     Master's thesis inspired by 'Reward Machines: Exploiting Reward Function Structure in Reinforcement Learning' (arXiv:2010.03950) and Rodrigo Toro Icarte's repository. Implements tabular Q-Learning where the Q-table is indexed by (RM_state, env_state) instead of just env_state. The Reward Machine is a deterministic finite automaton loaded from .txt files defining transitions with propositional conditions (e.g., 'p' = passenger picked up, 'd' = delivered, with negations '!p'). Supports CRM: when the agent violates a proposition, counterfactual experiences are generated to accelerate learning. Environments: Taxi-v3 (Gymnasium, 500 states), a custom MultiTaxiEnv with 2 passengers and dynamic state space (up to ~10000), and MiniGrid-DoorKey-5x5. Dynamic Q-Table storage (only saves visited pairs). Benchmarks 5 variants comparing convergence speed and mean reward. Includes GIF video recording of learned policies.
   es: |
     Trabajo de Fin de Máster inspirado en el paper 'Reward Machines: Exploiting Reward Function Structure in Reinforcement Learning' (arXiv:2010.03950) y el repositorio de Rodrigo Toro Icarte. Implementa Q-Learning tabular donde la Q-table se indexa por (estado_RM, estado_entorno) en lugar de solo estado_entorno. La Reward Machine es un autómata finito determinista cargado desde archivos .txt que definen las transiciones con condiciones proposicionales (ej: 'p' = pasajero recogido, 'd' = entregado, con negaciones '!p'). Soporta CRM: cuando el agente incumple una proposición, se generan experiencias contrafactuales para acelerar el aprendizaje. Entornos usados: Taxi-v3 (Gymnasium) con 500 estados, un MultiTaxiEnv propio con 2 pasajeros y espacio de estados dinámico (hasta ~10000), y MiniGrid-DoorKey-5x5. Q-Table con almacenamiento dinámico (solo guarda pares visitados). Benchmark con 5 variantes comparando convergencia y recompensa media. Incluye grabación de vídeos GIF de las políticas aprendidas.
-technologies: [python, jupyter, numpy, reinforcement-learning]
+technologies: [python, jupyter, numpy, reinforcement-learning, ai]
 tags: [class]
 logo: videos/base_description_Taxi-v3.gif
 screenShoots:
@@ -49,6 +49,7 @@ keywords:
 slug: TFM-Reinforcement-Learning-Reward-Machines
 order: 92
 featured: false
+
 
 
 
