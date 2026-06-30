@@ -1,6 +1,6 @@
 title:
-  en: TFM: Reward Machines on RL
-  es: TFM: Reward Machines en RL
+  en: "TFM: Reward Machines on RL"
+  es: "TFM: Reward Machines en RL"
 finished: progress
 descriptionShort:
   en: "Master's thesis implementing tabular Q-Learning augmented with Reward Machines (reward automata) and Counterfactual Reward Machines (CRM). Environments: Taxi-v3, MultiTaxi (2 passengers), MiniGrid-DoorKey. Benchmarks 5 variants (no RM, RM only, RM+CRM, improved versions)."
@@ -49,7 +49,6 @@ keywords:
 slug: TFM-Reinforcement-Learning-Reward-Machines
 relevancy: 92
 featured: false
-
 
 
 
