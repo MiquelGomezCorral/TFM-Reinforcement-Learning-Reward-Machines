@@ -108,3 +108,16 @@ Inspirado por https://arxiv.org/abs/2010.03950 y https://github.com/RodrigoToroI
 
 
 *Matenido por [MiquelGomezCorral](https://miquelgc.net)*
+
+---
+
+<!-- portfolio-gallery:start -->
+## Gallery
+
+<p align="center">
+  <img src="videos/base_description_Taxi-v3.gif" width="48%" />
+  <img src="videos/farming.gif" width="48%" />
+  <img src="videos/rm_doorkey.txt_qtable_video.gif" width="48%" />
+  <img src="videos/rm_taxi.txt_2-p2-normal_qtable_video.gif" width="48%" />
+</p>
+<!-- portfolio-gallery:end -->
