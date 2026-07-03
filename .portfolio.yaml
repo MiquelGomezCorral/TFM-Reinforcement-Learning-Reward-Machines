@@ -13,6 +13,7 @@ descriptionLong:
 technologies: [ai, jupyter, matplot, numpy, pygame, python, reinforcement-learning]
 tags: [class]
 logo: videos/base_description_Taxi-v3.gif
+gif: videos/base_description_Taxi-v3.gif
 screenShoots:
   - videos/base_description_Taxi-v3.gif
   - videos/farming.gif
@@ -49,7 +50,6 @@ keywords:
 slug: TFM-Reinforcement-Learning-Reward-Machines
 relevancy: 92
 featured: false
-
 
 
 
