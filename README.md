@@ -115,9 +115,36 @@ Inspirado por https://arxiv.org/abs/2010.03950 y https://github.com/RodrigoToroI
 ## Gallery
 
 <p align="center">
-  <img src="videos/base_description_Taxi-v3.gif" width="48%" />
-  <img src="videos/farming.gif" width="48%" />
-  <img src="videos/rm_doorkey.txt_qtable_video.gif" width="48%" />
-  <img src="videos/rm_taxi.txt_2-p2-normal_qtable_video.gif" width="48%" />
+  <img src="videos/base_description_Taxi-v3.gif" alt="base description Taxi v3" width="48%" />
+  <img src="videos/farming.gif" alt="farming" width="48%" />
+  <img src="videos/rm_doorkey.txt_qtable_video.gif" alt="rm doorkey.txt qtable video" width="48%" />
+  <img src="videos/rm_taxi.txt_2-p2-normal_qtable_video.gif" alt="rm taxi.txt 2 p2 normal qtable video" width="48%" />
+  <img src="videos/rm_taxi.txt_2-p2_qtable_video.gif" alt="rm taxi.txt 2 p2 qtable video" width="48%" />
+  <img src="videos/rm_taxi.txt_2_qtable_video.gif" alt="rm taxi.txt 2 qtable video" width="48%" />
+  <img src="videos/rm_taxi.txt_p2-normal_qtable_video.gif" alt="rm taxi.txt p2 normal qtable video" width="48%" />
+  <img src="videos/rm_taxi.txt_qtable_video.gif" alt="rm taxi.txt qtable video" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-0.gif" alt="rm taxi 2p.txt 0" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-1.gif" alt="rm taxi 2p.txt 1" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-2-0.gif" alt="rm taxi 2p.txt 2 0" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-2-1.gif" alt="rm taxi 2p.txt 2 1" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-2-2.gif" alt="rm taxi 2p.txt 2 2" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-2-3.gif" alt="rm taxi 2p.txt 2 3" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-2-4.gif" alt="rm taxi 2p.txt 2 4" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-2.gif" alt="rm taxi 2p.txt 2" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-3.gif" alt="rm taxi 2p.txt 3" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-4.gif" alt="rm taxi 2p.txt 4" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-p-0.gif" alt="rm taxi 2p.txt p 0" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-p-1.gif" alt="rm taxi 2p.txt p 1" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-p-2.gif" alt="rm taxi 2p.txt p 2" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-p-3.gif" alt="rm taxi 2p.txt p 3" width="48%" />
+  <img src="videos/rm_taxi_2p.txt-p-4.gif" alt="rm taxi 2p.txt p 4" width="48%" />
+  <img src="videos/rm_taxi_v2.txt_qtable_video.gif" alt="rm taxi v2.txt qtable video" width="48%" />
+  <img src="videos/rm_taxi_v2.txt_qtable_video_static.gif" alt="rm taxi v2.txt qtable video static" width="48%" />
+  <img src="videos/taxi_qtable_video.gif" alt="taxi qtable video" width="48%" />
+  <img src="videos/taxi-thumbnail.png" alt="taxi thumbnail" width="48%" />
+  <img src="videos/dinamic.png" alt="dinamic" width="48%" />
+  <img src="videos/dinamic_169.png" alt="dinamic" width="48%" />
+  <img src="videos/static.png" alt="static" width="48%" />
+  <img src="videos/static_169.png" alt="static" width="48%" />
 </p>
 <!-- portfolio-gallery:end -->
