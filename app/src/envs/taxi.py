@@ -29,17 +29,14 @@ def get_propositions_multi_taxi(env, _state, _action, new_state):
     p1, p2 = picked up (in taxi)
     d1, d2 = dropped correctly (at destination)
     """
-    _, _, p1_loc, p1_dest, p2_loc, p2_dest = env.unwrapped.decode(new_state)
+    decoded = env.unwrapped.decode(new_state)
     props = []
 
-    if p1_loc == 4:
-        props.append("p1")
-    elif p1_loc == p1_dest:
-        props.append("d1")
-
-    if p2_loc == 4:
-        props.append("p2")
-    elif p2_loc == p2_dest:
-        props.append("d2")
+    for i in range(env.unwrapped.num_passengers):
+        passenger_location, destination = decoded[2 + i * 2:4 + i * 2]
+        if passenger_location == 4:
+            props.append(f"p{i + 1}")
+        elif passenger_location == destination:
+            props.append(f"d{i + 1}")
 
     return props

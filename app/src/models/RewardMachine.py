@@ -32,7 +32,21 @@ class RewardMachine:
             )
 
             self.states.setdefault(u, []).append((u_next, condition, reward))
-        
+
+        if self.initial_state is None or self.final_state is None:
+            raise ValueError("Reward Machine requires initial and final states")
+
+        targets = {
+            target
+            for transitions in self.states.values()
+            for target, _, _ in transitions
+        }
+        invalid_states = (targets | {self.initial_state}) - self.states.keys() - {self.final_state}
+        if invalid_states:
+            raise ValueError(
+                f"Non-final RM states without transitions: {sorted(invalid_states)}"
+            )
+
         self._current_state = self.initial_state
 
     def _parse_lines(self):

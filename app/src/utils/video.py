@@ -3,10 +3,9 @@ import imageio
 import numpy as np
 
 from src.config import Configuration
-from src.models import QTableRM
 
 
-def record_video(CONFIG: Configuration, qt: QTableRM, env, get_propositions: callable, video_name: str = None):
+def record_video(CONFIG: Configuration, qt, env, get_propositions: callable, video_name: str = None):
   """
   Record a replay of the greedy policy.
 
@@ -17,19 +16,22 @@ def record_video(CONFIG: Configuration, qt: QTableRM, env, get_propositions: cal
   :param video_name: Optional output filename
   """
   images = []
-  raw_state, _ = env.reset(seed=CONFIG.seed)
+  state, info = env.reset(seed=CONFIG.seed)
+  raw_state = info.get("raw_state", state)
   img = env.render()
   images.append(img)
-  qt.reset_rm()
-  state = CONFIG.parse_state(env, raw_state) if CONFIG.parse_state else raw_state
+  if hasattr(qt, "reset_rm"):
+    qt.reset_rm()
+  state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
 
   for _ in range(CONFIG.max_steps):
     # Video replay is greedy: always take the action with max expected reward.
     action = qt.greedy_policy(state)
-    new_state, _, terminated, truncated, _ = env.step(action)
+    new_state, _, terminated, truncated, info = env.step(action)
+    new_raw_state = info.get("raw_state", new_state)
     rm_done = False
-    if qt.rm:
-      _, _, rm_done = qt.step_rm(get_propositions(env, raw_state, action, new_state))
+    if getattr(qt, "rm", None):
+      _, _, rm_done = qt.step_rm(get_propositions(env, raw_state, action, new_raw_state))
 
     img = env.render()
     images.append(img)
@@ -37,8 +39,8 @@ def record_video(CONFIG: Configuration, qt: QTableRM, env, get_propositions: cal
     if terminated or truncated or rm_done:
       break
 
-    raw_state = new_state
-    state = CONFIG.parse_state(env, raw_state) if CONFIG.parse_state else raw_state
+    raw_state = new_raw_state
+    state = CONFIG.parse_state(env, new_state) if CONFIG.parse_state else new_state
   
   if video_name:
     path = os.path.join(CONFIG.VIDEO_PATH, video_name)

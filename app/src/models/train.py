@@ -1,21 +1,22 @@
 from typing import Callable
-import numpy as np
 from tqdm import tqdm
 
 from src.config import Configuration
+from src.utils import compute_epsilon, next_episode_seed, seed_training
 from .QTable import QTableRM
 
 def train_qtable_crm(CONFIG: Configuration, Qtable: QTableRM, get_propositions: Callable, env):
-  seed_generator = np.random.default_rng(CONFIG.seed)
-  np.random.seed(CONFIG.seed)
-  env.action_space.seed(CONFIG.seed)
+  seed_generator = seed_training(CONFIG.seed, env.action_space)
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
     # Reduce epsilon because less exploration is needed over time.
-    epsilon = CONFIG.min_epsilon + (CONFIG.max_epsilon - CONFIG.min_epsilon)*np.exp(-CONFIG.decay_rate*episode)
+    epsilon = compute_epsilon(
+      CONFIG.min_epsilon, CONFIG.max_epsilon, episode, CONFIG.decay_rate
+    )
 
     # Reset the environment and RM at the start of each episode.
-    raw_state, _ = env.reset(seed=int(seed_generator.integers(0, 2**31)))
+    seed = next_episode_seed(seed_generator)
+    raw_state, _ = env.reset(seed=seed)
     Qtable.reset_rm()
 
     state = CONFIG.parse_state(env, raw_state) if CONFIG.parse_state else raw_state

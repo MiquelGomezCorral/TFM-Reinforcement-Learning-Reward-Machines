@@ -76,7 +76,7 @@ class QTableTest(unittest.TestCase):
 
     def test_environment_terminal_target_does_not_bootstrap(self):
         with tempfile.TemporaryDirectory() as models_path:
-            Path(models_path, "machine.txt").write_text("i:0\nf:2\n0;1;a;3\n")
+            Path(models_path, "machine.txt").write_text("i:0\nf:2\n0;1;a;3\n1;2;b;3\n")
             config = SimpleNamespace(MODELS_PATH=models_path)
             env = SimpleNamespace(
                 action_space=SimpleNamespace(n=2, sample=lambda: 1),
@@ -111,13 +111,29 @@ class QTableTest(unittest.TestCase):
 
     def test_reward_machine_rejects_ambiguous_transitions(self):
         with tempfile.TemporaryDirectory() as models_path:
-            Path(models_path, "machine.txt").write_text("i:0\nf:2\nr:-7\n0;1;a;3\n0;2;b;4\n")
+            Path(models_path, "machine.txt").write_text("i:0\nf:2\nr:-7\n0;1;a;3\n0;2;b;4\n1;2;z;1\n")
             config = SimpleNamespace(MODELS_PATH=models_path)
             machine = RewardMachine(config, "machine.txt")
 
             self.assertEqual(machine.simulate_step(0, set())[1], -7)
             with self.assertRaises(ValueError):
                 machine.simulate_step(0, {"a", "b"})
+
+    def test_reward_machine_rejects_non_final_dead_end(self):
+        with tempfile.TemporaryDirectory() as models_path:
+            Path(models_path, "machine.txt").write_text("i:0\nf:2\n0;1;a;3\n")
+            config = SimpleNamespace(MODELS_PATH=models_path)
+
+            with self.assertRaisesRegex(ValueError, "Non-final RM states"):
+                RewardMachine(config, "machine.txt")
+
+    def test_reward_machine_rejects_non_final_initial_dead_end(self):
+        with tempfile.TemporaryDirectory() as models_path:
+            Path(models_path, "machine.txt").write_text("i:0\nf:1\n")
+            config = SimpleNamespace(MODELS_PATH=models_path)
+
+            with self.assertRaisesRegex(ValueError, "Non-final RM states"):
+                RewardMachine(config, "machine.txt")
 
 
 if __name__ == "__main__":

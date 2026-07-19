@@ -9,3 +9,4 @@ plotly
 pygame
 PyYAML
 tqdm
+torch

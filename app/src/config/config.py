@@ -50,11 +50,23 @@ class Configuration:
     use_crm: bool = False       # Whether to use the CRM or not
     parse_state: Callable = None
     dynamic_qtable: bool = True
+    multitaxi_grid_size: int = 5
+    multitaxi_num_passengers: int = 2
+    multitaxi_observation_mode: str = "discrete"
 
     # Exploration parameters
     max_epsilon: float = 1.0    # Exploration probability at start
     min_epsilon: float = 0.05   # Minimum exploration probability
     decay_rate: float = 0.0005  # Exponential decay rate for exploration prob
+
+    # DQN parameters
+    dqn_batch_size: int = 128
+    dqn_replay_capacity: int = 10000
+    dqn_learning_rate: float = 3e-4
+    dqn_hidden_size: int = 128
+    dqn_tau: float = 0.005
+    dqn_gradient_clip: float = 100
+    dqn_epsilon_decay_steps: int = 2500
 
     def _load_yaml_configuration(self, yaml_file: str) -> None:
         """Load config values from a YAML file under CONFIGS_PATH."""
@@ -79,3 +91,7 @@ class Configuration:
     def generate_eval_seeds(self) -> None:
         rng = random.Random(self.seed)
         self.eval_seed = [rng.randrange(2**32) for _ in range(self.n_eval_episodes)]
+
+    def set_seed(self, seed: int) -> None:
+        self.seed = seed
+        self.generate_eval_seeds()

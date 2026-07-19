@@ -5,12 +5,19 @@ import pygame # New import
 
 
 class MultiTaxiEnv(gym.Env):
-    metadata = {"render_modes": []}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, grid_size=5, num_passengers=2, render_mode=None): # Updated signature
+    def __init__(
+        self,
+        grid_size=5,
+        num_passengers=2,
+        observation_mode="discrete",
+        render_mode=None,
+    ):
         self.grid_size = grid_size
         self.num_passengers = num_passengers
-        self.render_mode = render_mode # New
+        self.observation_mode = observation_mode
+        self.render_mode = render_mode
 
         if grid_size == 5:
             self.locs = [(0, 0), (0, 4), (4, 0), (4, 3)]
@@ -20,7 +27,17 @@ class MultiTaxiEnv(gym.Env):
             raise ValueError("grid_size must be 5 or 10")
 
         self.state_bounds = [grid_size, grid_size] + [5, 4] * num_passengers
-        self.observation_space = spaces.Discrete(int(np.prod(self.state_bounds)))
+        if observation_mode == "discrete":
+            self.observation_space = spaces.Discrete(int(np.prod(self.state_bounds)))
+        elif observation_mode == "relative":
+            self.observation_space = spaces.Box(
+                low=-1.0,
+                high=1.0,
+                shape=(7 * num_passengers,),
+                dtype=np.float32,
+            )
+        else:
+            raise ValueError(f"Unsupported observation_mode: {observation_mode}")
         self.action_space = spaces.Discrete(6)
         self.state = None
         
@@ -45,7 +62,8 @@ class MultiTaxiEnv(gym.Env):
             state_tuple.extend([p_loc, p_dest])
 
         self.state = state_tuple
-        return self.encode(self.state), {}
+        raw_state = self.encode(self.state)
+        return self._observation(), {"raw_state": raw_state}
 
     def step(self, action):
         taxi_r, taxi_c = self.state[0], self.state[1]
@@ -86,7 +104,39 @@ class MultiTaxiEnv(gym.Env):
         self.state = [taxi_r, taxi_c] + passengers
         terminated = all(passengers[i*2] == passengers[i*2+1] for i in range(self.num_passengers))
         
-        return self.encode(self.state), reward, terminated, False, {}
+        raw_state = self.encode(self.state)
+        return self._observation(), reward, terminated, False, {"raw_state": raw_state}
+
+    def _observation(self):
+        if self.observation_mode == "discrete":
+            return self.encode(self.state)
+
+        taxi_r, taxi_c = self.state[:2]
+        scale = self.grid_size - 1
+        observation = []
+        for i in range(self.num_passengers):
+            passenger_location, destination = self.state[2 + i * 2:4 + i * 2]
+            destination_r, destination_c = self.locs[destination]
+
+            if passenger_location == 4:
+                passenger_r, passenger_c = taxi_r, taxi_c
+                status = (0.0, 1.0, 0.0)
+            elif passenger_location == destination:
+                passenger_r, passenger_c = destination_r, destination_c
+                status = (0.0, 0.0, 1.0)
+            else:
+                passenger_r, passenger_c = self.locs[passenger_location]
+                status = (1.0, 0.0, 0.0)
+
+            observation.extend([
+                (passenger_r - taxi_r) / scale,
+                (passenger_c - taxi_c) / scale,
+                (destination_r - taxi_r) / scale,
+                (destination_c - taxi_c) / scale,
+                *status,
+            ])
+
+        return np.asarray(observation, dtype=np.float32)
 
     def encode(self, state_tuple):
         return int(np.ravel_multi_index(state_tuple, self.state_bounds))

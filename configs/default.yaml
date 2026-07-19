@@ -23,3 +23,12 @@ use_crm: false  # Whether to use the CRM or not
 max_epsilon: 1.0  # Exploration probability at start
 min_epsilon: 0.05  # Minimum exploration probability
 decay_rate: 0.0005  # Exponential decay rate for exploration prob
+
+# DQN parameters
+dqn_batch_size: 128
+dqn_replay_capacity: 10000
+dqn_learning_rate: 0.0003
+dqn_hidden_size: 128
+dqn_tau: 0.005
+dqn_gradient_clip: 100
+dqn_epsilon_decay_steps: 2500
