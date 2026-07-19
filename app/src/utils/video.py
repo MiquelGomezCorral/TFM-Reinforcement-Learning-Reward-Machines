@@ -1,5 +1,4 @@
 import os
-import random 
 import imageio
 import numpy as np
 
@@ -9,39 +8,41 @@ from src.models import QTableRM
 
 def record_video(CONFIG: Configuration, qt: QTableRM, env, get_propositions: callable, video_name: str = None):
   """
-  Generate a replay video of the agent
+  Record a replay of the greedy policy.
+
   :param CONFIG: Configuration object
-  :param Qtable: Qtable of our agent
+  :param qt: Q-table or RM-indexed Q-table
+  :param env: Environment to render
+  :param get_propositions: Function that maps transitions to RM events
+  :param video_name: Optional output filename
   """
   images = []
-  terminated, truncated = False, False
-  state, info = env.reset(seed=random.randint(0,500))
+  raw_state, _ = env.reset(seed=CONFIG.seed)
   img = env.render()
   images.append(img)
   qt.reset_rm()
-  if CONFIG.skip_first_rm_state:
-      events = get_propositions(env, state)
-      qt.step_rm(events)
-  state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
+  state = CONFIG.parse_state(env, raw_state) if CONFIG.parse_state else raw_state
 
-  i = 0
-
-  while not terminated and not truncated and i < CONFIG.max_steps:
-    i+=1
-    # Take the action (index) that have the maximum expected future reward given that state
+  for _ in range(CONFIG.max_steps):
+    # Video replay is greedy: always take the action with max expected reward.
     action = qt.greedy_policy(state)
-    state, reward, terminated, truncated, info = env.step(action) # We directly put next_state = state for recording logic
-    if CONFIG.use_rm:
-      qt.step_rm(get_propositions(env, state))
-    
-    state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
-    
+    new_state, _, terminated, truncated, _ = env.step(action)
+    rm_done = False
+    if qt.rm:
+      _, _, rm_done = qt.step_rm(get_propositions(env, raw_state, action, new_state))
+
     img = env.render()
     images.append(img)
+
+    if terminated or truncated or rm_done:
+      break
+
+    raw_state = new_state
+    state = CONFIG.parse_state(env, raw_state) if CONFIG.parse_state else raw_state
   
   if video_name:
     path = os.path.join(CONFIG.VIDEO_PATH, video_name)
   else:
     path = os.path.join(CONFIG.VIDEO_PATH, f"{CONFIG.exp_description}_{CONFIG.gym_id}.gif")
     
-  imageio.mimsave(path, [np.array(img) for i, img in enumerate(images)], fps=3)
+  imageio.mimsave(path, [np.array(img) for img in images], fps=CONFIG.video_fps)

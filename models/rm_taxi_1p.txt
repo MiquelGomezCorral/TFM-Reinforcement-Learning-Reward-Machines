@@ -1,0 +1,14 @@
+# Taxi V3
+# Initial state / Final state / Default reward
+i: 0
+f: 2
+r: -1
+
+# u | u_next | prepositions | reward
+
+# State 0, can stay or pick up the passenger
+0; 1; p; 5
+
+# State 1, can stay or drop the passenger
+1; 2; p,d; 20
+1; 1; !p; -5

@@ -3,14 +3,13 @@ import os
 from src.config import Configuration
 
 class RewardMachine:
-    def __init__(self, CONFIG: Configuration, file_name: str, default_reward=-1):
+    def __init__(self, CONFIG: Configuration, file_name: str):
         self.file_path = os.path.join(CONFIG.MODELS_PATH, file_name)
-        
-        self.default_reward = default_reward
+        self.default_reward = 0
         self.initial_state = None
         self.final_state = None
         self._current_state = None
-        self.states = dict() 
+        self.states = {}
 
         lines = self._parse_lines()
         
@@ -21,6 +20,9 @@ class RewardMachine:
             if line.startswith('f:'):
                 self.final_state = int(line.split(':')[1])
                 continue
+            if line.startswith('r:'):
+                self.default_reward = float(line.split(':')[1])
+                continue
 
             u, u_next, condition, reward = line.split(';')
             u, u_next, condition, reward = (
@@ -29,26 +31,17 @@ class RewardMachine:
                 float(reward)
             )
 
-            if u not in self.states:
-                self.states[u] = set()
-            self.states[u].add((u_next, condition, reward))
+            self.states.setdefault(u, []).append((u_next, condition, reward))
         
         self._current_state = self.initial_state
 
     def _parse_lines(self):
-        def _parse_line(line):
-            clean = line.strip()
-            pos = clean.find('#')
-            if pos != -1:
-                clean = clean[:pos].strip()
-            return clean
-
-        with open(self.file_path, 'r') as f:
-            lines = [
-                _parse_line(l)
-                for l in f.readlines() 
-                if l.strip() and not l.startswith('#')
-            ]
+        lines = []
+        with open(self.file_path, "r", encoding="utf-8") as file:
+            for line in file:
+                clean = line.split("#", 1)[0].strip()
+                if clean:
+                    lines.append(clean)
         return lines
 
     def get_num_states(self):
@@ -62,21 +55,19 @@ class RewardMachine:
     
     def simulate_step(self, start_u, events):
         """Simulates a step without changing the current state."""
-        # Default to no transition and zero reward
+        matches = []
         for next_u, condition, reward in self.states.get(start_u, []):
-            holds = True
-            for cond in condition:
-                if cond.startswith("!"):
-                    if cond[1:] in events: 
-                        holds = False
-                        break
-                else:
-                    if cond not in events: 
-                        holds = False
-                        break
+            if all(
+                cond[1:] not in events if cond.startswith("!") else cond in events
+                for cond in condition
+            ):
+                matches.append((next_u, reward))
 
-            if holds:
-                return next_u, reward, next_u == self.final_state
+        if len(matches) > 1:
+            raise ValueError(f"Ambiguous transitions from RM state {start_u}: {matches}")
+        if matches:
+            next_u, reward = matches[0]
+            return next_u, reward, next_u == self.final_state
 
         return start_u, self.default_reward, start_u == self.final_state
 

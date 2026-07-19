@@ -1,0 +1,16 @@
+# MiniGrid DoorKey RM
+# Initial state / Final state / Default reward
+i: 0
+f: 3
+r: -1
+
+# State 0: Agent needs to pick up the key
+0; 1; k; 1
+
+# State 1: Agent has key, needs to open the door
+# Note: k,o means the agent must STILL have the key AND the door is open
+1; 2; k,o; 2
+1; 0; !k; -5  # Penalty: Agent dropped the key before opening the door
+
+# State 2: Door is open, agent needs to reach the goal
+2; 3; g; 20

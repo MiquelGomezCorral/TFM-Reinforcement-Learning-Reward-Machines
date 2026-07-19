@@ -42,7 +42,6 @@ class QTable:
 
 class QTableRM:
     def __init__(self, CONFIG, env, rm_file: str = None, dynamic: bool = True):
-        self.CONFIG = CONFIG
         print(f"The QTable is {'dynamic' if dynamic else 'static'}")
         self.rm = RewardMachine(CONFIG, rm_file) if rm_file else None
         self.state_space = None if dynamic else env.observation_space.n
@@ -85,33 +84,34 @@ class QTableRM:
             state, epsilon, env.action_space.sample
         )
 
-    def update(self, state, action, env_reward, new_state, new_state_parse, gamma, learning_rate, env, get_propositions, use_crm=False, skip_first_rm_state=False):
+    def update(
+        self, state, action, env_reward, raw_state, new_state, new_state_parse,
+        gamma, learning_rate, env, get_propositions, terminated=False, use_crm=False,
+    ):
         current_u = self.get_rm_state()
-        done = False
-        target_u = current_u
-        reward = env_reward
+        rm_done = False
 
         if self.rm:
-            events = get_propositions(env, new_state)
+            events = get_propositions(env, raw_state, action, new_state)
 
-            target_u, reward, done = self.step_rm(events)
+            target_u, reward, rm_done = self.step_rm(events)
             if use_crm:
-                for u in self.rm.states.keys():
-                    if skip_first_rm_state and u == 0:
-                        continue  # Skip the first RM state
+                for u in self.rm.states:
                     t_u, r_u, d_u = self.rm.simulate_step(u, events)
+                    done = terminated or d_u
                     self._q_table(u).update(
-                        state, action, r_u, new_state_parse, d_u, gamma, learning_rate,
-                        self._q_table(t_u),
+                        state, action, r_u, new_state_parse, done, gamma, learning_rate,
+                        None if done else self._q_table(t_u),
                     )
             else:
+                done = terminated or rm_done
                 self._q_table(current_u).update(
                     state, action, reward, new_state_parse, done, gamma, learning_rate,
-                    self._q_table(target_u),
+                    None if done else self._q_table(target_u),
                 )
-            
-            # print(f"RM transition: {current_u} --{events}--> {target_u}, reward: {reward}, done: {done}")
         else:
-            self._q_table(current_u).update(state, action, reward, new_state_parse, done, gamma, learning_rate)
+            self._q_table(current_u).update(
+                state, action, env_reward, new_state_parse, terminated, gamma, learning_rate
+            )
 
-        return done
+        return rm_done

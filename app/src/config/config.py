@@ -4,13 +4,14 @@ Configuration of project variables that we want to have available
 everywhere and considered configuration.
 """
 import os
+import random
 from dataclasses import dataclass
 from typing import Callable
 
 from maikol_utils.file_utils import make_dirs
 import yaml
 
-@dataclass 
+@dataclass
 class Configuration:
     """Configuration class for the project."""
     # ===================================================================
@@ -28,10 +29,10 @@ class Configuration:
     # ===================================================================
 
     exp_name: str = "base_name"
-    rm_file: str = "rm_taxi.txt"
+    rm_file: str = "rm_taxi_v2.txt"
     exp_description: str = "base_description"
     seed:     int = 42
-    gym_id: str = "Taxi-v3"
+    gym_id: str = "Taxi-v4"
     video_fps: int = 10
 
     # Training parameters
@@ -44,10 +45,9 @@ class Configuration:
     # Environment parameters
     max_steps: int = 99         # Max steps per episode
     gamma: float = 0.95         # Discounting rate
-    eval_seed: list = None      # The evaluation seed of the environment
+    eval_seed: list | None = None
     use_rm: bool = False        # Whether to use the RM or not
     use_crm: bool = False       # Whether to use the CRM or not
-    skip_first_rm_state: bool = False
     parse_state: Callable = None
     dynamic_qtable: bool = True
 
@@ -73,4 +73,9 @@ class Configuration:
         if self.yaml_config_path:
             self._load_yaml_configuration(self.yaml_config_path)
 
-        self.eval_seed = list(range(self.n_eval_episodes))
+        if self.eval_seed is None:
+            self.generate_eval_seeds()
+
+    def generate_eval_seeds(self) -> None:
+        rng = random.Random(self.seed)
+        self.eval_seed = [rng.randrange(2**32) for _ in range(self.n_eval_episodes)]

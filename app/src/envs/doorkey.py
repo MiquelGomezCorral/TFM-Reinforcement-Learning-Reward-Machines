@@ -1,7 +1,7 @@
 import gymnasium as gym
 from gymnasium import spaces
 
-def get_propositions_doorkey(env, state):
+def get_propositions_doorkey(env, _state, _action, _new_state):
     """
     Looks at the internal MiniGrid state and returns a list of events.
     k: Agent is carrying the key

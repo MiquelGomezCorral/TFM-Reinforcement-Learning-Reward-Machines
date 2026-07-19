@@ -211,7 +211,7 @@ data/*
 logs/*
 !logs/.gitkeep
 models/*
-!models/*.md
+!models/*.txt
 !models/.gitkeep
 # videos/*
 !videos/.gitkeep

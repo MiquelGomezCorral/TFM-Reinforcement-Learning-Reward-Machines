@@ -1,9 +1,9 @@
 # Default configuration for TFM project
 exp_name: "base_name"
 exp_description: "base_description"
-rm_file: "rm_taxi.txt"
+rm_file: "rm_taxi_v2.txt"
 seed: 42
-gym_id: "Taxi-v3"
+gym_id: "Taxi-v4"
 video_fps: 1
 
 # Training parameters
@@ -16,7 +16,7 @@ n_eval_episodes: 100  # Total number of test episodes
 # Environment parameters
 max_steps: 99  # Max steps per episode
 gamma: 0.95  # Discounting rate
-use_rm: false  # Whether to use the RM or not
+use_rm: true  # Whether to use the RM or not
 use_crm: false  # Whether to use the CRM or not
 
 # Exploration parameters
