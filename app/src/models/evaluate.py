@@ -3,10 +3,10 @@ import numpy as np
 from tqdm import tqdm
 
 from src.config import Configuration
-from .QTable import QTable
+from .QTable import QTableRM
 
 
-def evaluate_agent(CONFIG: Configuration, qt: QTable, get_propositions: callable, env):
+def evaluate_agent(CONFIG: Configuration, qt: QTableRM, get_propositions: callable, env):
   """
   Evaluate the agent for ``n_eval_episodes`` episodes and returns average reward and std of reward.
   :param env: The evaluation environment

@@ -211,8 +211,11 @@ data/*
 logs/*
 !logs/.gitkeep
 models/*
+!models/*.md
 !models/.gitkeep
 # videos/*
 !videos/.gitkeep
 
 .vscode/*
+
+.DS_Store

@@ -1,63 +1,67 @@
 import numpy as np
 from .RewardMachine import RewardMachine
 
-class _StaticStorage:
-    def __init__(self, num_u_states, state_space, action_space):
-        self._table = np.zeros((num_u_states, state_space, action_space))
+class QTable:
+    def __init__(self, state_space, action_space, dynamic: bool = True):
+        self.action_space = action_space
+        self.dynamic = dynamic
+        self._table = {} if dynamic else np.zeros((state_space, action_space))
 
-    def get(self, u, state):
-        # print(f'{u = }')
-        # print(f'{state = }')
-        return self._table[u, state]       
-    
-    def set(self, u, state, values):
-        self._table[u, state] = values
+    def _state_key(self, state):
+        return tuple(state) if isinstance(state, np.ndarray) else state
 
-    def print_size(self):
-        print(f" - Q-Table size: {self._table.shape}")
+    def _values(self, state):
+        if not self.dynamic:
+            return self._table[state]
 
-
-class _DynamicStorage:
-    def __init__(self, action_space):
-        self._table = {}
-        self._action_space = action_space
-
-    def _ensure(self, u, state):
-        key = (u, state) if not isinstance(state, np.ndarray) else (u, tuple(state))
+        key = self._state_key(state)
         if key not in self._table:
-            self._table[key] = np.zeros((self._action_space,))  # explicit shape tuple
-
-        # print(f"Ensured key: {key}, total entries: {len(self._table)}")
-        return key
-
-    def get(self, u, state):
-        key = self._ensure(u, state)
+            self._table[key] = np.zeros(self.action_space)
         return self._table[key]
 
-    def set(self, u, state, values):
-        key = self._ensure(u, state)
-        self._table[key] = values
-
     def print_size(self):
-        print(f" - Q-Table entries: {len(self._table)} (u, state) pairs")
+        if self.dynamic:
+            print(f" - Q-Table entries: {len(self._table)} states")
+        else:
+            print(f" - Q-Table size: {self._table.shape}")
+
+    def greedy_policy(self, state):
+        return int(np.argmax(self._values(state)))
+
+    def epsilon_greedy_policy(self, state, epsilon, sample_action=None):
+        if np.random.random() > epsilon:
+            return self.greedy_policy(state)
+        return sample_action() if sample_action else int(np.random.randint(self.action_space))
+
+    def update(self, state, action, reward, new_state, done, gamma, learning_rate, next_q_table=None):
+        q_values = self._values(state)
+        next_q_table = self if next_q_table is None else next_q_table
+        future = 0 if done else gamma * np.max(next_q_table._values(new_state))
+        q_values[action] += learning_rate * (reward + future - q_values[action])
 
 
-class QTable:
+class QTableRM:
     def __init__(self, CONFIG, env, rm_file: str = None, dynamic: bool = True):
         self.CONFIG = CONFIG
-        print(f'The QTable is {'dynamic' if dynamic else 'static'}')
-        self.rm = RewardMachine(self.CONFIG, rm_file) if rm_file else None
+        print(f"The QTable is {'dynamic' if dynamic else 'static'}")
+        self.rm = RewardMachine(CONFIG, rm_file) if rm_file else None
+        self.state_space = None if dynamic else env.observation_space.n
+        self.action_space = env.action_space.n
+        rm_states = self.rm.states if self.rm else [0]
+        self._q_tables = {u: self._new_q_table() for u in rm_states}
 
-        num_u = self.rm.get_num_states() if self.rm else 1
-        action_space = env.action_space.n
+    def _new_q_table(self):
+        return QTable(self.state_space, self.action_space, dynamic=self.state_space is None)
 
-        if dynamic:
-            self._storage = _DynamicStorage(action_space)
-        else:
-            self._storage = _StaticStorage(num_u, env.observation_space.n, action_space)
+    def _q_table(self, u):
+        if u not in self._q_tables:
+            self._q_tables[u] = self._new_q_table()
+        return self._q_tables[u]
 
     def print_size(self):
-        self._storage.print_size()
+        for u, q_table in self._q_tables.items():
+            print(f" - RM state {u}", end="")
+            q_table.print_size()
 
     def get_rm_state(self):
         return self.rm.get_current_state() if self.rm else 0
@@ -74,20 +78,12 @@ class QTable:
     def greedy_policy(self, state, u=None):
         if u is None:
             u = self.get_rm_state()
-        return int(np.argmax(self._storage.get(u, state)))
+        return self._q_table(u).greedy_policy(state)
 
     def epsilon_greedy_policy(self, state, epsilon, env):
-        if np.random.random() > epsilon:
-            return self.greedy_policy(state)
-        return env.action_space.sample()
-
-    def _update_q_value(self, u, state, action, reward, target_u, new_state, done, gamma, learning_rate):
-        q_values = self._storage.get(u, state).copy()
-        future = 0 if done else gamma * np.max(self._storage.get(target_u, new_state))
-        # print(q_values.shape)
-        # print(q_values)
-        q_values[action] = q_values[action] + learning_rate * (reward + future - q_values[action])
-        self._storage.set(u, state, q_values)
+        return self._q_table(self.get_rm_state()).epsilon_greedy_policy(
+            state, epsilon, env.action_space.sample
+        )
 
     def update(self, state, action, env_reward, new_state, new_state_parse, gamma, learning_rate, env, get_propositions, use_crm=False, skip_first_rm_state=False):
         current_u = self.get_rm_state()
@@ -104,12 +100,18 @@ class QTable:
                     if skip_first_rm_state and u == 0:
                         continue  # Skip the first RM state
                     t_u, r_u, d_u = self.rm.simulate_step(u, events)
-                    self._update_q_value(u, state, action, r_u, t_u, new_state_parse, d_u, gamma, learning_rate)
+                    self._q_table(u).update(
+                        state, action, r_u, new_state_parse, d_u, gamma, learning_rate,
+                        self._q_table(t_u),
+                    )
             else:
-                self._update_q_value(current_u, state, action, reward, target_u, new_state_parse, done, gamma, learning_rate)
+                self._q_table(current_u).update(
+                    state, action, reward, new_state_parse, done, gamma, learning_rate,
+                    self._q_table(target_u),
+                )
             
             # print(f"RM transition: {current_u} --{events}--> {target_u}, reward: {reward}, done: {done}")
         else:
-            self._update_q_value(current_u, state, action, reward, target_u, new_state_parse, done, gamma, learning_rate)
+            self._q_table(current_u).update(state, action, reward, new_state_parse, done, gamma, learning_rate)
 
         return done

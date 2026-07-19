@@ -4,10 +4,10 @@ import imageio
 import numpy as np
 
 from src.config import Configuration
-from src.models import QTable
+from src.models import QTableRM
 
 
-def record_video(CONFIG: Configuration, qt: QTable, env, get_propositions: callable, video_name: str = None):
+def record_video(CONFIG: Configuration, qt: QTableRM, env, get_propositions: callable, video_name: str = None):
   """
   Generate a replay video of the agent
   :param CONFIG: Configuration object

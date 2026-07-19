@@ -3,7 +3,7 @@ import gymnasium as gym
 
 from maikol_utils.print_utils import print_separator
 
-from src.models import QTable, train_qtable, evaluate_agent
+from src.models import QTableRM, train_qtable_crm, evaluate_agent
 from src.utils import record_video
 from src.envs import get_propositions_taxi, get_propositions_doorkey, MiniGridDiscreteWrapper
 from src.config import Configuration
@@ -24,14 +24,17 @@ def train_qt(CONFIG: Configuration):
     print(" - There are ", action_space, " possible actions")
 
     print_separator("Q-Table", sep_type="LONG")
-    qt = QTable(CONFIG, env, rm_file=CONFIG.rm_file if CONFIG.use_rm else None)
+    qt = QTableRM(
+        CONFIG, env, rm_file=CONFIG.rm_file if CONFIG.use_rm else None,
+        dynamic=CONFIG.dynamic_qtable,
+    )
     qt.print_size()
 
     # ==================================================================
     #                               TRAINING
     # ==================================================================
     print_separator("TRAINING", sep_type="SUPER")
-    qt = train_qtable(CONFIG, qt, get_propositions_doorkey, env)
+    qt = train_qtable_crm(CONFIG, qt, get_propositions_doorkey, env)
 
     # ==================================================================
     #                               TESTING

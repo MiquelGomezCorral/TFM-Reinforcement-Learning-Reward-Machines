@@ -4,9 +4,9 @@ from tqdm import tqdm
 
 import gymnasium as gym
 from src.config import Configuration
-from .QTable import QTable
+from .QTable import QTableRM
 
-def train_qtable(CONFIG: Configuration, Qtable: QTable, get_propositions: Callable, env):
+def train_qtable_crm(CONFIG: Configuration, Qtable: QTableRM, get_propositions: Callable, env):
   env = env if env else gym.make(CONFIG.gym_id, render_mode="rgb_array")
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
