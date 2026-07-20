@@ -1,0 +1,26 @@
+# MultiTaxi smoke configuration for tabular HRM
+exp_name: "hrm_multitaxi"
+exp_description: "Tabular HRM on MultiTaxi"
+rm_file: "rm_taxi_2p.txt"
+seed: 42
+gym_id: "MultiTaxi-v0"
+video_fps: 4
+
+# Short test values
+n_training_episodes: 10
+learning_rate: 0.7
+n_eval_episodes: 2
+max_steps: 20
+gamma: 0.95
+
+multitaxi_grid_size: 5
+multitaxi_num_passengers: 2
+multitaxi_observation_mode: "discrete"
+
+max_epsilon: 1.0
+min_epsilon: 0.05
+decay_rate: 0.0005
+
+hrm_r_plus: 1
+hrm_r_minus: 0
+hrm_q_init: 0  # Use 2 for the paper's optimistic initialization

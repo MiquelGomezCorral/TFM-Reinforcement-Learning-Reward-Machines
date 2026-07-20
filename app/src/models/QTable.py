@@ -2,10 +2,14 @@ import numpy as np
 from .RewardMachine import RewardMachine
 
 class QTable:
-    def __init__(self, state_space, action_space, dynamic: bool = True):
+    def __init__(self, state_space, action_space, dynamic: bool = True, initial_value: float = 0):
         self.action_space = action_space
         self.dynamic = dynamic
-        self._table = {} if dynamic else np.zeros((state_space, action_space))
+        self.initial_value = initial_value
+        self._table = (
+            {} if dynamic
+            else np.full((state_space, action_space), initial_value, dtype=float)
+        )
 
     def _state_key(self, state):
         return tuple(state) if isinstance(state, np.ndarray) else state
@@ -16,8 +20,11 @@ class QTable:
 
         key = self._state_key(state)
         if key not in self._table:
-            self._table[key] = np.zeros(self.action_space)
+            self._table[key] = np.full(self.action_space, self.initial_value, dtype=float)
         return self._table[key]
+
+    def values(self, state):
+        return self._values(state)
 
     def print_size(self):
         if self.dynamic:

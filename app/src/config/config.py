@@ -59,6 +59,11 @@ class Configuration:
     min_epsilon: float = 0.05   # Minimum exploration probability
     decay_rate: float = 0.0005  # Exponential decay rate for exploration prob
 
+    # HRM parameters
+    hrm_r_plus: float = 1
+    hrm_r_minus: float = 0
+    hrm_q_init: float = 0       # Use 2 for the paper's optimistic initialization
+
     # DQN parameters
     dqn_batch_size: int = 128
     dqn_replay_capacity: int = 10000

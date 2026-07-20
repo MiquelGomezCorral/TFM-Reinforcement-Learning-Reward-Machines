@@ -24,6 +24,11 @@ max_epsilon: 1.0  # Exploration probability at start
 min_epsilon: 0.05  # Minimum exploration probability
 decay_rate: 0.0005  # Exponential decay rate for exploration prob
 
+# HRM parameters
+hrm_r_plus: 1
+hrm_r_minus: 0
+hrm_q_init: 0  # Use 2 for the paper's optimistic initialization
+
 # DQN parameters
 dqn_batch_size: 128
 dqn_replay_capacity: 10000
