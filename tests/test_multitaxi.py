@@ -13,11 +13,11 @@ class MultiTaxiTest(unittest.TestCase):
 
         observation = env._observation()
 
-        np.testing.assert_array_equal(
-            observation,
-            np.array([0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0.75, 0, 1, 0], dtype=np.float32),
-        )
-
+        self.assertEqual(observation.shape, (14,))
+        np.testing.assert_array_equal(observation[:4], np.array([0, 1, 1, 0]))
+        np.testing.assert_array_equal(observation[4:7], np.array([1, 0, 0]))
+        np.testing.assert_array_equal(observation[7:11], np.array([0, 0, 1, 0.75]))
+        np.testing.assert_array_equal(observation[11:14], np.array([0, 1, 0]))
     def test_relative_reset_preserves_discrete_raw_state(self):
         env = MultiTaxiEnv(num_passengers=3, observation_mode="relative")
 
