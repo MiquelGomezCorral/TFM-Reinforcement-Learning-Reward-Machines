@@ -75,6 +75,11 @@ class DQN:
         with torch.no_grad():
             return int(self.policy_net(self._state_tensor(state)).argmax(dim=1).item())
 
+    def q_values(self, state, target=False):
+        network = self.target_net if target else self.policy_net
+        with torch.no_grad():
+            return network(self._state_tensor(state)).squeeze(0).cpu().numpy()
+
     def epsilon_greedy_policy(self, state, epsilon, sample_action=None):
         if random.random() > epsilon:
             return self.greedy_policy(state)

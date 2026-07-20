@@ -1,0 +1,30 @@
+exp_name: "dhrm_multitaxi"
+exp_description: "Deep HRM on MultiTaxi"
+rm_file: "rm_taxi_2p.txt"
+seed: 42
+gym_id: "MultiTaxi-v0"
+video_fps: 4
+
+# Short test values
+n_training_episodes: 10
+n_eval_episodes: 2
+max_steps: 20
+gamma: 0.95
+
+multitaxi_grid_size: 5
+multitaxi_num_passengers: 2
+multitaxi_observation_mode: "relative"
+
+max_epsilon: 1.0
+min_epsilon: 0.05
+dqn_epsilon_decay_steps: 2500
+
+hrm_r_plus: 1
+hrm_r_minus: 0
+
+dqn_batch_size: 8
+dqn_replay_capacity: 10000
+dqn_learning_rate: 0.0003
+dqn_hidden_size: 128
+dqn_tau: 0.005
+dqn_gradient_clip: 100
