@@ -3,7 +3,7 @@ import numpy as np
 from src.config import Configuration
 
 from .QTable import QTable
-from .RewardMachine import RewardMachine
+from .HRM import HRM
 
 
 class QTableHRM:
@@ -39,7 +39,6 @@ class QTableHRM:
             env.action_space.n,
             initial_value=CONFIG.hrm_q_init,
         )
-        self.active_option = None
 
     @staticmethod
     def _environment_state(state) -> object:
