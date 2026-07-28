@@ -52,7 +52,7 @@ class QTableTest(unittest.TestCase):
             )
 
             self.assertFalse(done)
-            self.assertEqual(q_table._q_table(0)._values(0)[1], 5)
+            self.assertEqual(q_table._q_table(0).values(0)[1], 5)
             self.assertEqual(q_table.epsilon_greedy_policy(0, 1, env), 1)
 
     def test_reward_machine_terminal_target_does_not_bootstrap(self):
@@ -72,7 +72,7 @@ class QTableTest(unittest.TestCase):
             )
 
             self.assertTrue(done)
-            self.assertEqual(q_table._q_table(0)._values(0)[1], 3)
+            self.assertEqual(q_table._q_table(0).values(0)[1], 3)
 
     def test_environment_terminal_target_does_not_bootstrap(self):
         with tempfile.TemporaryDirectory() as models_path:
@@ -90,7 +90,7 @@ class QTableTest(unittest.TestCase):
                 lambda _, __, ___, ____: {"a"}, terminated=True,
             )
 
-            self.assertEqual(q_table._q_table(0)._values(0)[1], 3)
+            self.assertEqual(q_table._q_table(0).values(0)[1], 3)
 
     def test_crm_updates_initial_reward_machine_state(self):
         with tempfile.TemporaryDirectory() as models_path:
@@ -107,7 +107,7 @@ class QTableTest(unittest.TestCase):
                 lambda _, __, ___, ____: {"a"}, use_crm=True,
             )
 
-            self.assertEqual(q_table._q_table(0)._values(0)[1], 3)
+            self.assertEqual(q_table._q_table(0).values(0)[1], 3)
 
     def test_reward_machine_rejects_ambiguous_transitions(self):
         with tempfile.TemporaryDirectory() as models_path:
