@@ -1,5 +1,7 @@
 import numpy as np
 
+from src.config import Configuration
+
 from .QTable import QTable
 from .RewardMachine import RewardMachine
 
@@ -7,14 +9,15 @@ from .RewardMachine import RewardMachine
 class QTableHRM:
     """Two-level tabular HRM agent with a high-level policy and option actor."""
 
-    def __init__(self, config, env, rm_file) -> None:
+    def __init__(self, CONFIG: Configuration, env, rm_file) -> None:
         """
         Initialize high-level and actor Q-tables for a Reward Machine.
 
         The high-level table selects the next RM target. The actor table selects
         environment actions while pursuing the selected option.
         """
-        self.rm = RewardMachine(config, rm_file)
+        self.CONFIG = CONFIG
+        self.rm = RewardMachine(CONFIG, rm_file)
         # The final state has no outgoing transitions, so it is not an RM source state.
         self.rm_states = tuple(sorted(self.rm.states))
         self.target_states = tuple(sorted({*self.rm_states, self.rm.final_state}))
@@ -29,12 +32,12 @@ class QTableHRM:
         self.high_level = QTable(
             None,
             len(self.target_states),
-            initial_value=config.hrm_q_init,
+            initial_value=CONFIG.hrm_q_init,
         )
         self.actor = QTable(
             None,
             env.action_space.n,
-            initial_value=config.hrm_q_init,
+            initial_value=CONFIG.hrm_q_init,
         )
         self.active_option = None
 
@@ -130,3 +133,37 @@ class QTableHRM:
             epsilon,
             env.action_space.sample,
         )
+
+    def counterfactual_update(self, events: list, terminated: bool, state, action, new_state) -> None:
+        """Update all actor tables for the same environment transition."""
+        # Every option learns from the transition as a counterfactual experience.
+        for counterfactual_u, targets in self.options.items():
+            counterfactual_next_u, counterfactual_reward, _ = self.rm.simulate_step(
+                counterfactual_u, events
+            )
+            option_done = terminated or counterfactual_next_u != counterfactual_u
+            for target_u in targets:
+                shaped_reward = self._option_reward(
+                    counterfactual_reward,
+                    counterfactual_u,
+                    target_u,
+                    counterfactual_next_u,
+                    self.CONFIG.hrm_r_plus,
+                    self.CONFIG.hrm_r_minus,
+                )
+                self.actor.update(
+                    self.actor_state(state, counterfactual_u, target_u),
+                    action,
+                    shaped_reward,
+                    self.actor_state(new_state, counterfactual_u, target_u),
+                    option_done,
+                    self.CONFIG.gamma,
+                    self.CONFIG.learning_rate,
+                )
+
+
+    @staticmethod
+    def _option_reward(base_reward, u, target_u, next_u, r_plus, r_minus):
+        if target_u == u:
+            return base_reward
+        return base_reward + (r_plus if next_u == target_u else r_minus)

@@ -1,5 +1,7 @@
 import numpy as np
 
+from src.config import Configuration
+
 from .RewardMachine import RewardMachine
 
 
@@ -87,7 +89,7 @@ class QTable:
 class QTableRM:
     """Q-learning agent indexed by Reward Machine state."""
 
-    def __init__(self, CONFIG, env, rm_file: str = None, dynamic: bool = True) -> None:
+    def __init__(self, CONFIG: Configuration, env, rm_file: str = None, dynamic: bool = True) -> None:
         """
         Initialize one Q-table per Reward Machine source state.
 
