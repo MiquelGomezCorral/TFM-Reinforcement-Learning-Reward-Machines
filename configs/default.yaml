@@ -1,23 +1,26 @@
 # Default configuration for TFM project
 exp_name: "base_name"
 exp_description: "base_description"
-rm_file: "rm_taxi_v2.txt"
+rm_file: "rm_taxi_2p.txt"
 seed: 42
-gym_id: "Taxi-v4"
+gym_id: "MultiTaxi-v0"
 video_fps: 1
 
 # Training parameters
-n_training_episodes: 10000  # Total training episodes
+n_training_episodes: 20000  # Total training episodes
 learning_rate: 0.7  # Learning rate
 
 # Evaluation parameters
-n_eval_episodes: 100  # Total number of test episodes
+n_eval_episodes: 200  # Total number of test episodes
 
 # Environment parameters
 max_steps: 99  # Max steps per episode
 gamma: 0.95  # Discounting rate
 use_rm: true  # Whether to use the RM or not
 use_crm: false  # Whether to use the CRM or not
+multitaxi_grid_size: 5
+multitaxi_num_passengers: 2
+multitaxi_observation_mode: "discrete"
 
 # Exploration parameters
 max_epsilon: 1.0  # Exploration probability at start
@@ -32,8 +35,9 @@ hrm_q_init: 0  # Use 2 for the paper's optimistic initialization
 # DQN parameters
 dqn_batch_size: 128
 dqn_replay_capacity: 10000
-dqn_learning_rate: 0.0003
+dqn_learning_rate: 0.001
 dqn_hidden_size: 128
 dqn_tau: 0.005
 dqn_gradient_clip: 100
 dqn_epsilon_decay_steps: 2500
+dqn_optimize_interval: 4

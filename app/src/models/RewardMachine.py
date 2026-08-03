@@ -85,10 +85,6 @@ class RewardMachine:
                 f"Non-final RM states without transitions: {sorted(invalid_states)}"
             )
 
-    def get_num_states(self) -> int:
-        """Return the number of RM states with outgoing transitions."""
-        return len(self.states)
-
     def get_current_state(self) -> int:
         """Return the currently active RM state."""
         return self._current_state

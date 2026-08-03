@@ -13,6 +13,7 @@ class DQNHRM(HRM):
 
         super().__init__(config, rm_file)
         self._rm_indices = {u: index for index, u in enumerate(self.rm_states)}
+        self._valid_option_states = None
 
         observation_size = env.observation_space.shape[0]
         self.high_level = self._new_dqn(
@@ -24,21 +25,26 @@ class DQNHRM(HRM):
             config,
             observation_size + len(self.rm_states) + len(self.target_states),
             env.action_space.n,
+            sum(map(len, self.options.values())),
         )
 
     @staticmethod
-    def _new_dqn(config, input_size, action_size):
+    def _new_dqn(config, input_size, action_size, batch_multiplier=1):
         return DQN(
             input_size=input_size,
             action_size=action_size,
-            batch_size=config.dqn_batch_size,
-            replay_capacity=config.dqn_replay_capacity,
+            batch_size=config.dqn_batch_size * batch_multiplier,
+            replay_capacity=config.dqn_replay_capacity * batch_multiplier,
             learning_rate=config.dqn_learning_rate,
             gamma=config.gamma,
             hidden_size=config.dqn_hidden_size,
             tau=config.dqn_tau,
             gradient_clip=config.dqn_gradient_clip,
         )
+
+    def reset_rm(self):
+        super().reset_rm()
+        self._valid_option_states = None
 
     def _rm_state(self, u):
         state = np.zeros(len(self.rm_states), dtype=np.float32)

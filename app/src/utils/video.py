@@ -48,3 +48,4 @@ def record_video(CONFIG: Configuration, qt, env, get_propositions: callable, vid
     path = os.path.join(CONFIG.VIDEO_PATH, f"{CONFIG.exp_description}_{CONFIG.gym_id}.gif")
     
   imageio.mimsave(path, [np.array(img) for img in images], fps=CONFIG.video_fps)
+  print(f" - Saved video: {path} ({CONFIG.video_fps} FPS)")

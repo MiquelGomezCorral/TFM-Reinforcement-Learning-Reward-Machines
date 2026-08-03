@@ -1,7 +1,7 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-import pygame # New import
+import pygame
 
 
 class MultiTaxiEnv(gym.Env):
@@ -33,7 +33,14 @@ class MultiTaxiEnv(gym.Env):
             self.observation_space = spaces.Box(
                 low=-1.0,
                 high=1.0,
-                shape=(7 * num_passengers,),
+                shape=(2 + 7 * num_passengers,),
+                dtype=np.float32,
+            )
+        elif observation_mode == "factored":
+            self.observation_space = spaces.Box(
+                low=0.0,
+                high=1.0,
+                shape=(2 * grid_size + 9 * num_passengers,),
                 dtype=np.float32,
             )
         else:
@@ -41,7 +48,6 @@ class MultiTaxiEnv(gym.Env):
         self.action_space = spaces.Discrete(6)
         self.state = None
         
-        # Pygame variables (lazy init in render)
         self.window_size = 512
         self.cell_size = self.window_size // self.grid_size
         self.window = None
@@ -70,50 +76,68 @@ class MultiTaxiEnv(gym.Env):
         passengers = self.state[2:]
         reward = -1
         terminated = False
+        invalid_action = False
 
-        if action == 0 and taxi_r < self.grid_size - 1: taxi_r += 1
-        elif action == 1 and taxi_r > 0: taxi_r -= 1
-        elif action == 2 and taxi_c < self.grid_size - 1: taxi_c += 1
-        elif action == 3 and taxi_c > 0: taxi_c -= 1
+        if action == 0:
+            if taxi_r < self.grid_size - 1: taxi_r += 1
+            else: invalid_action = True
+        elif action == 1:
+            if taxi_r > 0: taxi_r -= 1
+            else: invalid_action = True
+        elif action == 2:
+            if taxi_c < self.grid_size - 1: taxi_c += 1
+            else: invalid_action = True
+        elif action == 3:
+            if taxi_c > 0: taxi_c -= 1
+            else: invalid_action = True
         
-        # Inside the step(self, action) method
         elif action == 4:
-            picked_up = False
+            picked_up = 0
             for i in range(self.num_passengers):
                 p_loc = passengers[i*2]
-                p_dest = passengers[i*2+1] # Added destination check
-                
-                # Check that they are not already at their destination!
+                p_dest = passengers[i*2+1]
                 if p_loc < 4 and p_loc != p_dest and (taxi_r, taxi_c) == self.locs[p_loc]:
                     passengers[i*2] = 4
-                    picked_up = True
-            if not picked_up: reward = -10
+                    picked_up += 1
+            reward = 5 * picked_up if picked_up else -10
+            invalid_action = not picked_up
 
         elif action == 5:
-            dropped_off = False
+            dropped_off = 0
             for i in range(self.num_passengers):
                 p_loc, p_dest = passengers[i*2], passengers[i*2+1]
                 if p_loc == 4 and (taxi_r, taxi_c) == self.locs[p_dest]:
                     passengers[i*2] = p_dest 
-                    dropped_off = True
+                    dropped_off += 1
             if dropped_off:
-                reward = 20
+                reward = 20 * dropped_off
             else:
                 reward = -10
+                invalid_action = True
 
         self.state = [taxi_r, taxi_c] + passengers
         terminated = all(passengers[i*2] == passengers[i*2+1] for i in range(self.num_passengers))
         
         raw_state = self.encode(self.state)
-        return self._observation(), reward, terminated, False, {"raw_state": raw_state}
+        return self._observation(), reward, terminated, False, {
+            "raw_state": raw_state,
+            "invalid_action": invalid_action,
+        }
 
     def _observation(self):
         if self.observation_mode == "discrete":
             return self.encode(self.state)
+        if self.observation_mode == "factored":
+            observation = []
+            for value, size in zip(self.state, self.state_bounds):
+                encoded = np.zeros(size, dtype=np.float32)
+                encoded[value] = 1.0
+                observation.extend(encoded)
+            return np.asarray(observation, dtype=np.float32)
 
         taxi_r, taxi_c = self.state[:2]
         scale = self.grid_size - 1
-        observation = []
+        observation = [taxi_r / scale, taxi_c / scale]
         for i in range(self.num_passengers):
             passenger_location, destination = self.state[2 + i * 2:4 + i * 2]
             destination_r, destination_c = self.locs[destination]

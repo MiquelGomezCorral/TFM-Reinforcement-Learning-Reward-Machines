@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 
+from src.config import Configuration
 from src.utils import next_episode_seed, seed_training
 
 
@@ -27,6 +28,12 @@ class SeedTest(unittest.TestCase):
 
         self.assertEqual(action_space.value, 42)
         self.assertEqual(next_episode_seed(generator), next_episode_seed(np.random.default_rng(42)))
+
+    def test_evaluation_seeds_can_be_shared_across_training_seeds(self):
+        first = Configuration(seed=42, eval_seed_base=7, n_eval_episodes=3)
+        second = Configuration(seed=43, eval_seed_base=7, n_eval_episodes=3)
+
+        self.assertEqual(first.eval_seed, second.eval_seed)
 
 
 if __name__ == "__main__":

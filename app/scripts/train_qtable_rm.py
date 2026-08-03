@@ -6,13 +6,15 @@ from src.envs import create_environment
 from src.config import Configuration
 
 
-def train_qt(CONFIG: Configuration):
+def train_qt(CONFIG: Configuration, progress_callback=None):
     """Train QTable with Reward Machines."""
     # ==================================================================
     #                       ENVIRONMENT & Q TABLE
     # ==================================================================
     print_separator("Environment", sep_type="LONG")
-    env, get_propositions = create_environment(CONFIG.gym_id)
+    env, get_propositions = create_environment(
+        CONFIG
+    )
 
     print(" - There are ", env.observation_space.n, " possible states")
     print(" - There are ", env.action_space.n, " possible actions")
@@ -28,7 +30,7 @@ def train_qt(CONFIG: Configuration):
     #                               TRAINING
     # ==================================================================
     print_separator("TRAINING", sep_type="SUPER")
-    qt = train_qtable_crm(CONFIG, qt, get_propositions, env)
+    qt = train_qtable_crm(CONFIG, qt, get_propositions, env, progress_callback)
 
     # ==================================================================
     #                               TESTING
@@ -38,5 +40,7 @@ def train_qt(CONFIG: Configuration):
     print(f" - Mean_reward={mean_reward:.2f} +/- {std_reward:.2f}")
 
     print_separator("VIDEO RECORDING", sep_type="LONG")
-    record_video(CONFIG, qt, env, get_propositions, video_name=f"{CONFIG.rm_file}_qtable_video.gif")
+    grid = f"{CONFIG.multitaxi_grid_size}x{CONFIG.multitaxi_grid_size}"
+    record_video(CONFIG, qt, env, get_propositions, video_name=f"{grid}_{CONFIG.exp_name}_seed{CONFIG.seed}_video.gif")
     env.close()
+    return mean_reward, std_reward

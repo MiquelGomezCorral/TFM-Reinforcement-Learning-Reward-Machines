@@ -1,0 +1,153 @@
+{
+  "updated_at": "2026-07-29T14:54:54+02:00",
+  "objective": "For HRM and DQN + RM + CRM, complete 200/200 shared-seed evaluations with mean environment reward at least 30 and reward standard deviation at most 5 for training seeds 42, 43, and 44.",
+  "status": {
+    "three_seed_gate": "passed with real app CLI runs",
+    "ten_seed_confirmation": "historical inline harness",
+    "remaining_training_seed": null,
+    "final_app_cli_validation": "passed"
+  },
+  "validated_configuration": {
+    "evaluation_seed_generator": 20260720,
+    "evaluation_episodes": 200,
+    "invalid_action_definition": "failed pickup/drop-off or blocked boundary movement",
+    "max_steps": 100,
+    "gamma": 0.99,
+    "observation": "factored",
+    "base_batch_size": 32,
+    "effective_crm_batch_size": 256,
+    "replay_capacity": 50000,
+    "learning_rate": 0.001,
+    "hidden_size": 128,
+    "tau": 0.005,
+    "gradient_clip": 100,
+    "epsilon_decay_steps": 250000,
+    "optimize_interval": 4,
+    "learning_starts": 1000,
+    "checkpoint_interval_episodes": 5000,
+    "validation_seed_generator": 20260719,
+    "validation_episodes": 1000,
+    "episodes": {
+      "DQN": 10000,
+      "DQN + RM": 10000,
+      "DQN + RM + CRM": 60000
+    },
+    "crm_replay_multiplier": 8
+  },
+  "implemented_changes": [
+    "Factored Markov observation for deep variants",
+    "Pickup and delivery progress rewards",
+    "Optimizer interval support",
+    "CRM reachable-state filtering",
+    "CRM next-state reachability computed before source-state filtering",
+    "CRM replay capacity scaling with the base optimizer batch",
+    "CRM preservation of stronger invalid-action environment penalties",
+    "Positive-reward stratified replay",
+    "O(1)-indexable fixed-capacity replay ring",
+    "Separate fixed validation checkpoint selection",
+    "HRM self-loop option removal and reachable option updates",
+    "HRM constant exploration matching the reference implementation"
+  ],
+  "confirmation_summary": {
+    "source": "historical inline harness before final CLI pipeline validation",
+    "DQN": {"mean_success_rate": 0.9745, "minimum_success_rate": 0.95},
+    "DQN + RM": {"mean_success_rate": 0.9735, "minimum_success_rate": 0.93},
+    "DQN + RM + CRM": {"mean_success_rate": 0.951, "minimum_success_rate": 0.84}
+  },
+  "app_cli_validation": {
+    "commands": [
+      "python main.py --config dqn_plain.yaml --seed 42 train-dqn",
+      "python main.py --config dqn_rm.yaml --seed 42 train-dqn",
+      "python main.py --config dqn.yaml --seed 42 train-dqn"
+    ],
+    "results": [
+      {"variant": "DQN", "mean_reward": 33.72, "reward_std": 18.77, "video": "videos/dqn_video.gif"},
+      {"variant": "DQN + RM", "mean_reward": 36.48, "reward_std": 3.53, "video": "videos/dqn_rm_video.gif"},
+      {"variant": "DQN + RM + CRM", "mean_reward": 36.27, "reward_std": 3.54, "video": "videos/dqn_rm_crm_video.gif"}
+    ]
+  },
+  "full_pipeline_validation": {
+    "source": "Final app/main.py seed-42 sweep using evaluation seed generator 20260720",
+    "results": [
+      {"variant": "Q-learning", "successes": 199, "invalid_actions": 100, "mean_reward": 34.64, "reward_std": 10.34},
+      {"variant": "QRM", "successes": 199, "invalid_actions": 100, "mean_reward": 29.98, "reward_std": 73.13},
+      {"variant": "QRM + CRM", "successes": 199, "invalid_actions": 100, "mean_reward": 29.98, "reward_std": 73.13},
+      {"variant": "HRM", "successes": 200, "invalid_actions": 0, "mean_reward": 35.40, "reward_std": 4.04},
+      {"variant": "DQN", "successes": 196, "invalid_actions": 386, "mean_reward": 33.72, "reward_std": 18.77},
+      {"variant": "DQN + RM", "successes": 200, "invalid_actions": 0, "mean_reward": 36.48, "reward_std": 3.53},
+      {"variant": "DQN + RM + CRM", "successes": 200, "invalid_actions": 0, "mean_reward": 36.27, "reward_std": 3.54}
+    ]
+  },
+  "deep_hrm_smoke": {
+    "configuration": "dhrm.yaml",
+    "training_episodes": 10,
+    "evaluation_episodes": 2,
+    "successes": 0,
+    "mean_reward": -20.0,
+    "reward_std": 0.0,
+    "note": "Execution smoke test only; not comparable to benchmark configurations"
+  },
+  "variance_reliability_validation": {
+    "gate": "200/200 successes, no invalid actions, mean_reward >= 30, and reward_std <= 5 over shared 200 evaluation seeds",
+    "source": "app/main.py with training seeds 42, 43, and 44; evaluation seed generator 20260720",
+    "results": [
+      {"variant": "HRM", "seed": 42, "successes": 200, "invalid_actions": 0, "mean_reward": 35.40, "reward_std": 4.04, "mean_successful_steps": 18.15, "worst_reward": 25},
+      {"variant": "HRM", "seed": 43, "successes": 200, "invalid_actions": 0, "mean_reward": 35.56, "reward_std": 4.02, "mean_successful_steps": 18.00, "worst_reward": 26},
+      {"variant": "HRM", "seed": 44, "successes": 200, "invalid_actions": 0, "mean_reward": 35.38, "reward_std": 4.08, "mean_successful_steps": 18.16, "worst_reward": 25},
+      {"variant": "DQN + RM + CRM", "seed": 42, "successes": 200, "invalid_actions": 0, "mean_reward": 36.27, "reward_std": 3.54, "mean_successful_steps": 17.16, "worst_reward": 27},
+      {"variant": "DQN + RM + CRM", "seed": 43, "successes": 200, "invalid_actions": 0, "mean_reward": 35.98, "reward_std": 3.64, "mean_successful_steps": 17.45, "worst_reward": 27},
+      {"variant": "DQN + RM + CRM", "seed": 44, "successes": 200, "invalid_actions": 0, "mean_reward": 35.65, "reward_std": 3.70, "mean_successful_steps": 17.78, "worst_reward": 26}
+    ]
+  },
+  "rejected_variance_experiments": [
+    {"change": "canonical uniform CRM replay at 20,000 episodes", "seed": 43, "successes": 0, "mean_reward": -95.12, "reward_std": 4.18},
+    {"change": "30,000 CRM episodes without validation checkpoint selection", "seed": 42, "successes": 199, "mean_reward": 31.11, "reward_std": 73.18},
+    {"change": "40,000 CRM episodes without validation checkpoint selection", "seed": 44, "successes": 198, "mean_reward": 34.66, "reward_std": 12.17},
+    {"change": "Double DQN target", "seed": 44, "successes": 198, "mean_reward": 30.59, "reward_std": 66.14},
+    {"change": "60,000 CRM episodes using final weights", "seed": 43, "successes": 197, "mean_reward": 34.13, "reward_std": 16.69}
+  ],
+  "final_verification": {
+    "unittest": "40 passed",
+    "confirmation_records": "30 historical records plus final shared-evaluation HRM and CRM runs for seeds 42-44",
+    "git_diff_check": "passed",
+    "review": "no blocking integration findings"
+  },
+  "confirmation_records": [
+    {"variant": "DQN", "seed": 42, "episodes": 10000, "success_rate": 0.955, "mean_reward": 31.03, "reward_std": 26.99961296018889, "mean_steps": 20.43, "training_seconds": 247.06521355399855},
+    {"variant": "DQN + RM", "seed": 42, "episodes": 10000, "success_rate": 0.99, "mean_reward": 25.72, "reward_std": 101.06285964685544, "mean_steps": 18.465, "training_seconds": 246.1060575020001},
+    {"variant": "DQN + RM + CRM", "seed": 42, "episodes": 20000, "success_rate": 0.99, "mean_reward": 24.04, "reward_std": 99.44409685848629, "mean_steps": 20.305, "training_seconds": 730.7236034590005},
+    {"variant": "DQN", "seed": 43, "episodes": 10000, "success_rate": 0.985, "mean_reward": 34.295, "reward_std": 15.987744525104223, "mean_steps": 18.565, "training_seconds": 255.08852044299965},
+    {"variant": "DQN + RM", "seed": 43, "episodes": 10000, "success_rate": 0.98, "mean_reward": 24.03, "reward_std": 103.8786749049101, "mean_steps": 19.41, "training_seconds": 257.0492513419995},
+    {"variant": "DQN + RM + CRM", "seed": 43, "episodes": 20000, "success_rate": 0.95, "mean_reward": -2.725, "reward_std": 183.60588055669677, "mean_steps": 23.39, "training_seconds": 724.9469552390001},
+    {"variant": "DQN", "seed": 44, "episodes": 10000, "success_rate": 0.98, "mean_reward": 33.285, "reward_std": 19.23158274817754, "mean_steps": 19.19, "training_seconds": 252.3801064549989},
+    {"variant": "DQN + RM", "seed": 44, "episodes": 10000, "success_rate": 0.96, "mean_reward": 13.905, "reward_std": 138.47106547939896, "mean_steps": 20.585, "training_seconds": 262.61814696500005},
+    {"variant": "DQN + RM + CRM", "seed": 44, "episodes": 20000, "success_rate": 0.86, "mean_reward": -39.885, "reward_std": 248.045080126577, "mean_steps": 30.545, "training_seconds": 638.2177593980014},
+    {"variant": "DQN", "seed": 45, "episodes": 10000, "success_rate": 0.95, "mean_reward": 30.24, "reward_std": 27.19066751663151, "mean_steps": 21.245, "training_seconds": 262.3959573840002},
+    {"variant": "DQN + RM", "seed": 45, "episodes": 10000, "success_rate": 0.985, "mean_reward": 25.19, "reward_std": 101.03634939960965, "mean_steps": 18.77, "training_seconds": 245.97789253300107},
+    {"variant": "DQN + RM + CRM", "seed": 45, "episodes": 20000, "success_rate": 0.965, "mean_reward": 1.795, "reward_std": 173.97854170845324, "mean_steps": 21.555, "training_seconds": 754.0096972720003},
+    {"variant": "DQN", "seed": 46, "episodes": 10000, "success_rate": 0.985, "mean_reward": 34.965, "reward_std": 14.418868714292396, "mean_steps": 18.085, "training_seconds": 235.94357703999958},
+    {"variant": "DQN + RM", "seed": 46, "episodes": 10000, "success_rate": 0.93, "mean_reward": 3.85, "reward_std": 160.4411029007218, "mean_steps": 23.92, "training_seconds": 330.76460530799886},
+    {"variant": "DQN + RM + CRM", "seed": 46, "episodes": 20000, "success_rate": 0.995, "mean_reward": 29.545, "reward_std": 73.11715239941994, "mean_steps": 19.2, "training_seconds": 737.1909464479995},
+    {"variant": "DQN", "seed": 47, "episodes": 10000, "success_rate": 0.99, "mean_reward": 34.7, "reward_std": 13.516286472252652, "mean_steps": 18.37, "training_seconds": 238.3605538339998},
+    {"variant": "DQN + RM", "seed": 47, "episodes": 10000, "success_rate": 0.96, "mean_reward": 21.3, "reward_std": 104.42126220267593, "mean_steps": 21.16, "training_seconds": 312.5342001659992},
+    {"variant": "DQN + RM + CRM", "seed": 47, "episodes": 20000, "success_rate": 0.985, "mean_reward": 18.78, "reward_std": 124.22584916191958, "mean_steps": 20.62, "training_seconds": 756.6919984750002},
+    {"variant": "DQN", "seed": 48, "episodes": 10000, "success_rate": 0.95, "mean_reward": 26.085, "reward_std": 75.50402489271681, "mean_steps": 21.37, "training_seconds": 260.6026011940012},
+    {"variant": "DQN + RM", "seed": 48, "episodes": 10000, "success_rate": 0.965, "mean_reward": 13.705, "reward_std": 140.21532717574067, "mean_steps": 20.79, "training_seconds": 251.90526745300122},
+    {"variant": "DQN + RM + CRM", "seed": 48, "episodes": 20000, "success_rate": 0.84, "mean_reward": -79.055, "reward_std": 307.3100095587516, "mean_steps": 31.535, "training_seconds": 889.6823145620001},
+    {"variant": "DQN", "seed": 49, "episodes": 10000, "success_rate": 0.98, "mean_reward": 33.86, "reward_std": 19.423192322581787, "mean_steps": 18.585, "training_seconds": 256.9185560750011},
+    {"variant": "DQN + RM", "seed": 49, "episodes": 10000, "success_rate": 0.99, "mean_reward": 26.135, "reward_std": 102.74534916481622, "mean_steps": 17.89, "training_seconds": 248.2504339520001},
+    {"variant": "DQN + RM + CRM", "seed": 49, "episodes": 20000, "success_rate": 0.985, "mean_reward": 20.34, "reward_std": 113.42964515504755, "mean_steps": 20.395, "training_seconds": 834.2570434410009},
+    {"variant": "DQN", "seed": 50, "episodes": 10000, "success_rate": 0.985, "mean_reward": 34.655, "reward_std": 15.948227957989562, "mean_steps": 18.19, "training_seconds": 250.20158203000028},
+    {"variant": "DQN + RM", "seed": 50, "episodes": 10000, "success_rate": 0.985, "mean_reward": 20.625, "reward_std": 124.90253950580829, "mean_steps": 18.715, "training_seconds": 254.80661807599972},
+    {"variant": "DQN + RM + CRM", "seed": 50, "episodes": 20000, "success_rate": 0.99, "mean_reward": 24.79, "reward_std": 100.54912182610049, "mean_steps": 19.44, "training_seconds": 827.3182941659998},
+    {"variant": "DQN", "seed": 51, "episodes": 10000, "success_rate": 0.985, "mean_reward": 25.4, "reward_std": 93.19222070537863, "mean_steps": 19.38, "training_seconds": 244.12279768000008},
+    {"variant": "DQN + RM", "seed": 51, "episodes": 10000, "success_rate": 0.99, "mean_reward": 30.195, "reward_std": 73.12029113043793, "mean_steps": 18.335, "training_seconds": 231.44915313300044},
+    {"variant": "DQN + RM + CRM", "seed": 51, "episodes": 20000, "success_rate": 0.95, "mean_reward": -14.835, "reward_std": 217.23993135471204, "mean_steps": 22.605, "training_seconds": 615.6763060310004}
+  ],
+  "incidents": [
+    "An initial CRM run timed out because deque sampling scaled with the 400k-entry replay buffer.",
+    "The replay buffer was changed to a fixed-capacity list ring; 100 samples of 1152 transitions from 450k entries then took 0.036 seconds.",
+    "A concurrent seed-44 CRM run hit a CUDA gather assertion; a standalone rerun with insertion assertions passed at 86% success with every action in range.",
+    "Inline harnesses exercised the project modules for fixed-seed success metrics; final acceptance subsequently passed through app/main.py for all three variants."
+  ]
+}

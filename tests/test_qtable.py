@@ -3,29 +3,37 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
+
 from src.envs import (
     MiniGridDiscreteWrapper,
     create_environment,
     get_propositions_doorkey,
-    get_propositions_taxi,
+    get_propositions_multi_taxi,
 )
+from src.config import Configuration
 from src.models.QTable import QTable, QTableRM
 from src.models.RewardMachine import RewardMachine
 
 
 class QTableTest(unittest.TestCase):
     def test_environment_factory(self):
-        taxi, propositions = create_environment("Taxi-v4")
-        self.assertIs(propositions, get_propositions_taxi)
+        taxi, propositions = create_environment(
+            Configuration(gym_id="MultiTaxi-v0", multitaxi_grid_size=10)
+        )
+        self.assertIs(propositions, get_propositions_multi_taxi)
+        self.assertEqual(taxi.observation_space.n, 40_000)
         taxi.close()
 
-        doorkey, propositions = create_environment("MiniGrid-DoorKey-5x5-v0")
+        doorkey, propositions = create_environment(
+            Configuration(gym_id="MiniGrid-DoorKey-5x5-v0")
+        )
         self.assertIsInstance(doorkey, MiniGridDiscreteWrapper)
         self.assertIs(propositions, get_propositions_doorkey)
         doorkey.close()
 
         with self.assertRaises(ValueError):
-            create_environment("Unknown-v0")
+            create_environment(Configuration(gym_id="Unknown-v0"))
 
     def test_update_changes_greedy_action(self):
         q_table = QTable(None, 2)
@@ -33,6 +41,15 @@ class QTableTest(unittest.TestCase):
         q_table.update("state", 1, 3, "next_state", True, 0.9, 1)
 
         self.assertEqual(q_table.greedy_policy("state"), 1)
+
+    def test_greedy_policy_breaks_maximum_ties_randomly(self):
+        q_table = QTable(None, 3)
+        q_table.values("state")[:] = [2, 2, 1]
+        np.random.seed(1)
+
+        actions = {q_table.greedy_policy("state") for _ in range(20)}
+
+        self.assertEqual(actions, {0, 1})
 
     def test_reward_machine_bootstraps_from_target_table(self):
         with tempfile.TemporaryDirectory() as models_path:
@@ -109,6 +126,29 @@ class QTableTest(unittest.TestCase):
 
             self.assertEqual(q_table._q_table(0).values(0)[1], 3)
 
+    def test_reward_machine_preserves_invalid_action_penalty(self):
+        with tempfile.TemporaryDirectory() as models_path:
+            Path(models_path, "machine.txt").write_text(
+                "i:0\nf:2\nr:-1\n0;1;a;3\n1;2;b;4\n"
+            )
+            config = SimpleNamespace(MODELS_PATH=models_path)
+            env = SimpleNamespace(
+                action_space=SimpleNamespace(n=2, sample=lambda: 1),
+                observation_space=SimpleNamespace(n=2),
+            )
+
+            for use_crm in (False, True):
+                with self.subTest(use_crm=use_crm):
+                    q_table = QTableRM(config, env, "machine.txt")
+                    q_table.update(
+                        0, 1, -10, 0, 0, 0, 0.5, 1, env,
+                        lambda *_: set(),
+                        use_crm=use_crm,
+                        invalid_action=True,
+                    )
+
+                    self.assertEqual(q_table._q_table(0).values(0)[1], -10)
+
     def test_reward_machine_rejects_ambiguous_transitions(self):
         with tempfile.TemporaryDirectory() as models_path:
             Path(models_path, "machine.txt").write_text("i:0\nf:2\nr:-7\n0;1;a;3\n0;2;b;4\n1;2;z;1\n")
@@ -134,6 +174,15 @@ class QTableTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "Non-final RM states"):
                 RewardMachine(config, "machine.txt")
+
+    def test_reward_machine_current_state_persists(self):
+        with tempfile.TemporaryDirectory() as models_path:
+            Path(models_path, "machine.txt").write_text("i:0\nf:1\n0;1;a;3\n")
+            machine = RewardMachine(SimpleNamespace(MODELS_PATH=models_path), "machine.txt")
+
+            machine.step({"a"})
+
+            self.assertEqual(machine.get_current_state(), 1)
 
 
 if __name__ == "__main__":

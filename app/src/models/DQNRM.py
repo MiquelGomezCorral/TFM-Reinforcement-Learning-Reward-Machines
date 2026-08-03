@@ -12,16 +12,19 @@ class DQNRM:
         self.rm = RewardMachine(config, rm_file)
         self._rm_states = self._states()
         self._rm_indices = {u: index for index, u in enumerate(self._rm_states)}
+        crm_multiplier = len(self._rm_states) if config.use_crm else 1
+        self._valid_crm_states = None
         self.dqn = DQN(
             input_size=env.observation_space.shape[0] + len(self._rm_states),
             action_size=env.action_space.n,
-            batch_size=config.dqn_batch_size,
-            replay_capacity=config.dqn_replay_capacity * len(self._rm_states),
+            batch_size=config.dqn_batch_size * crm_multiplier,
+            replay_capacity=config.dqn_replay_capacity * crm_multiplier,
             learning_rate=config.dqn_learning_rate,
             gamma=config.gamma,
             hidden_size=config.dqn_hidden_size,
             tau=config.dqn_tau,
             gradient_clip=config.dqn_gradient_clip,
+            rewarding_fraction=0.25,
         )
 
     def _states(self):
@@ -43,6 +46,7 @@ class DQNRM:
 
     def reset_rm(self):
         self.rm.reset()
+        self._valid_crm_states = None
 
     def greedy_policy(self, state, u=None):
         return self.dqn.greedy_policy(self._state(state, self.get_rm_state() if u is None else u))
@@ -56,6 +60,7 @@ class DQNRM:
         self,
         state,
         action,
+        env_reward,
         raw_state,
         new_raw_state,
         new_state,
@@ -63,22 +68,28 @@ class DQNRM:
         env,
         get_propositions,
         use_crm=False,
+        optimize=True,
     ):
         events = get_propositions(env, raw_state, action, new_raw_state)
         current_u = self.get_rm_state()
         target_u, reward, rm_done = self.step_rm(events)
 
         if use_crm:
+            reachable_states = set()
             for u in self._rm_states:
                 next_u, counterfactual_reward, counterfactual_done = self.rm.simulate_step(u, events)
+                reachable_states.add(next_u)
+                if self._valid_crm_states is not None and u not in self._valid_crm_states:
+                    continue
                 terminal = terminated or counterfactual_done
                 self.dqn.remember(
                     self._state(state, u),
                     action,
-                    counterfactual_reward,
+                    min(env_reward, counterfactual_reward),
                     None if terminal else self._state(new_state, next_u),
                     terminal,
                 )
+            self._valid_crm_states = reachable_states
         else:
             terminal = terminated or rm_done
             self.dqn.remember(
@@ -89,5 +100,6 @@ class DQNRM:
                 terminal,
             )
 
-        self.dqn.optimize()
+        if optimize:
+            self.dqn.optimize()
         return rm_done

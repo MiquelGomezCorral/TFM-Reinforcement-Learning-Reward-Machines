@@ -5,11 +5,11 @@ seed: 42
 gym_id: "MultiTaxi-v0"
 video_fps: 4
 
-# Short test values
-n_training_episodes: 10
-n_eval_episodes: 2
-max_steps: 20
-gamma: 0.95
+n_training_episodes: 20000
+n_eval_episodes: 200
+eval_seed_base: 20260720
+max_steps: 100
+gamma: 0.99
 
 multitaxi_grid_size: 5
 multitaxi_num_passengers: 2
@@ -17,14 +17,19 @@ multitaxi_observation_mode: "relative"
 
 max_epsilon: 1.0
 min_epsilon: 0.05
-dqn_epsilon_decay_steps: 2500
+dqn_epsilon_decay_steps: 250000
 
 hrm_r_plus: 1
 hrm_r_minus: 0
 
-dqn_batch_size: 8
-dqn_replay_capacity: 10000
-dqn_learning_rate: 0.0003
+dqn_batch_size: 32
+dqn_replay_capacity: 50000
+dqn_learning_rate: 0.001
 dqn_hidden_size: 128
 dqn_tau: 0.005
 dqn_gradient_clip: 100
+dqn_optimize_interval: 4
+dqn_learning_starts: 1000
+dqn_checkpoint_interval: 1000
+dqn_validation_episodes: 1000
+dqn_validation_seed_base: 20260719

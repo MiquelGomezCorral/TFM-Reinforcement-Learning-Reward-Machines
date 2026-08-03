@@ -6,6 +6,7 @@ from .taxi import get_propositions_multi_taxi, get_propositions_taxi
 from .taxi_big_env import MultiTaxiEnv
 from .wrappers import OneHotDiscreteWrapper
 
+from src.config import Configuration
 
 ENVIRONMENT_FAMILIES = {
     "MiniGrid": (MiniGridDiscreteWrapper, get_propositions_doorkey),
@@ -14,27 +15,24 @@ ENVIRONMENT_FAMILIES = {
 
 
 def create_environment(
-    gym_id: str,
+    CONFIG: Configuration,
     one_hot_discrete: bool = False,
-    multitaxi_grid_size: int = 5,
-    multitaxi_num_passengers: int = 2,
-    multitaxi_observation_mode: str = "discrete",
 ):
-    family = gym_id.split("-", 1)[0]
+    family = CONFIG.gym_id.split("-", 1)[0]
     if family == "MultiTaxi":
         env = MultiTaxiEnv(
-            grid_size=multitaxi_grid_size,
-            num_passengers=multitaxi_num_passengers,
-            observation_mode=multitaxi_observation_mode,
+            grid_size=CONFIG.multitaxi_grid_size,
+            num_passengers=CONFIG.multitaxi_num_passengers,
+            observation_mode=CONFIG.multitaxi_observation_mode,
             render_mode="rgb_array",
         )
         get_propositions = get_propositions_multi_taxi
     else:
         if family not in ENVIRONMENT_FAMILIES:
-            raise ValueError(f"Unsupported gym_id: {gym_id}")
+            raise ValueError(f"Unsupported gym_id: {CONFIG.gym_id}")
 
         wrapper, get_propositions = ENVIRONMENT_FAMILIES[family]
-        env = gym.make(gym_id, render_mode="rgb_array")
+        env = gym.make(CONFIG.gym_id, render_mode="rgb_array")
         if wrapper:
             env = wrapper(env)
 

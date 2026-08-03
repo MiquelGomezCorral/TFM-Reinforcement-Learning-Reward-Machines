@@ -34,6 +34,7 @@ def train_qtable_hrm(
     qtable: QTableHRM,
     get_propositions,
     env,
+    progress_callback=None,
 ) -> QTableHRM:
     seed_generator = seed_training(CONFIG.seed, env.action_space)
 
@@ -121,5 +122,8 @@ def train_qtable_hrm(
 
             state = new_state
             raw_state = new_raw_state
+
+        if progress_callback:
+            progress_callback(episode + 1, qtable, env, get_propositions)
 
     return qtable

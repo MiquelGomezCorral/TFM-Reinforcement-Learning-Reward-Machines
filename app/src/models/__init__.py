@@ -8,7 +8,6 @@ from .QTable import QTable, QTableRM
 from .QTableHRM import QTableHRM
 from .DQN import DQN, ReplayMemory
 from .DQNHRM import DQNHRM
-from .DQNNetwork import DQNNetwork
 from .DQNRM import DQNRM
 from .train import train_qtable_crm
 from .train_hrm import train_qtable_hrm

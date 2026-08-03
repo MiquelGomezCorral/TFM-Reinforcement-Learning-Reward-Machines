@@ -58,7 +58,8 @@ class QTable:
 
     def greedy_policy(self, state) -> int:
         """Return the action with the greatest Q-value for a state."""
-        return int(np.argmax(self.values(state)))
+        values = self.values(state)
+        return int(np.random.choice(np.flatnonzero(values == np.max(values))))
 
     def epsilon_greedy_policy(self, state, epsilon, sample_action=None) -> int:
         """
@@ -151,6 +152,7 @@ class QTableRM:
     def update(
         self, state, action, env_reward, raw_state, new_state, new_state_parse,
         gamma, learning_rate, env, get_propositions, terminated=False, use_crm=False,
+        invalid_action=False,
     ) -> bool:
         """
         Update Q-values from one environment transition.
@@ -170,13 +172,15 @@ class QTableRM:
                     t_u, r_u, d_u = self.rm.simulate_step(u, events)
                     done = terminated or d_u
                     self._q_table(u).update(
-                        state, action, r_u, new_state_parse, done, gamma, learning_rate,
+                        state, action, env_reward if invalid_action else r_u,
+                        new_state_parse, done, gamma, learning_rate,
                         None if done else self._q_table(t_u),
                     )
             else:
                 done = terminated or rm_done
                 self._q_table(current_u).update(
-                    state, action, reward, new_state_parse, done, gamma, learning_rate,
+                    state, action, env_reward if invalid_action else reward,
+                    new_state_parse, done, gamma, learning_rate,
                     None if done else self._q_table(target_u),
                 )
         else:

@@ -1,10 +1,12 @@
 from .RewardMachine import RewardMachine
 
 
-def option_reward(base_reward, u, target_u, next_u, r_plus, r_minus):
-    if target_u == u:
-        return base_reward
-    return base_reward + (r_plus if next_u == target_u else r_minus)
+def option_reward(base_reward, target_u, next_u, option_done, r_plus, r_minus):
+    if next_u == target_u:
+        return base_reward + r_plus
+    if option_done:
+        return base_reward + r_minus
+    return base_reward
 
 
 class HRM:
@@ -16,9 +18,12 @@ class HRM:
             target: action for action, target in enumerate(self.target_states)
         }
         self.options = {
-            u: tuple(sorted({u, *(target for target, _, _ in transitions)}))
+            u: tuple(sorted({target for target, _, _ in transitions if target != u}))
             for u, transitions in self.rm.states.items()
         }
+        empty_options = [u for u, targets in self.options.items() if not targets]
+        if empty_options:
+            raise ValueError(f"HRM states without non-self options: {empty_options}")
         self.active_option = None
 
     def target_action(self, target_u):
