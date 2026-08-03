@@ -210,10 +210,11 @@ data/*
 !data/.gitkeep
 logs/*
 !logs/.gitkeep
+!logs/dqn_multitaxi_recovery_progress.json
 models/*
 !models/*.txt
 !models/.gitkeep
-# videos/*
+videos/*
 !videos/.gitkeep
 
 .vscode/*
