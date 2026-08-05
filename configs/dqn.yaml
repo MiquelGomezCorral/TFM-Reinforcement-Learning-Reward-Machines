@@ -14,7 +14,7 @@ use_rm: true
 use_crm: true
 multitaxi_grid_size: 5
 multitaxi_num_passengers: 2
-multitaxi_observation_mode: "factored"
+multitaxi_observation_mode: "relative"
 
 max_epsilon: 1.0
 min_epsilon: 0.05

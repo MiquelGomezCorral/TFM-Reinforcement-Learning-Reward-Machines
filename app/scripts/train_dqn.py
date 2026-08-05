@@ -7,6 +7,9 @@ from src.utils import record_video, seed_dqn
 
 
 def train_dqn_agent(CONFIG: Configuration, progress_callback=None):
+    if CONFIG.use_crm and not CONFIG.use_rm:
+        raise ValueError("use_crm requires use_rm=True")
+
     seed_dqn(CONFIG.seed)
     env, get_propositions = create_environment(
         CONFIG,
@@ -32,7 +35,6 @@ def train_dqn_agent(CONFIG: Configuration, progress_callback=None):
     agent = train_dqn(CONFIG, agent, get_propositions, env, progress_callback)
     mean_reward, std_reward = evaluate_agent(CONFIG, agent, get_propositions, env)
     print(f" - Mean_reward={mean_reward:.2f} +/- {std_reward:.2f}")
-    variant = "dqn_rm_crm" if CONFIG.use_crm else "dqn_rm" if CONFIG.use_rm else "dqn"
     grid = f"{CONFIG.multitaxi_grid_size}x{CONFIG.multitaxi_grid_size}"
     record_video(CONFIG, agent, env, get_propositions, video_name=f"{grid}_{CONFIG.exp_name}_seed{CONFIG.seed}_video.gif")
     env.close()

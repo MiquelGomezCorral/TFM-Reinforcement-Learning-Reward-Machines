@@ -13,7 +13,6 @@ class DQNRM:
         self._rm_states = self._states()
         self._rm_indices = {u: index for index, u in enumerate(self._rm_states)}
         crm_multiplier = len(self._rm_states) if config.use_crm else 1
-        self._valid_crm_states = None
         self.dqn = DQN(
             input_size=env.observation_space.shape[0] + len(self._rm_states),
             action_size=env.action_space.n,
@@ -46,7 +45,6 @@ class DQNRM:
 
     def reset_rm(self):
         self.rm.reset()
-        self._valid_crm_states = None
 
     def greedy_policy(self, state, u=None):
         return self.dqn.greedy_policy(self._state(state, self.get_rm_state() if u is None else u))
@@ -75,12 +73,8 @@ class DQNRM:
         target_u, reward, rm_done = self.step_rm(events)
 
         if use_crm:
-            reachable_states = set()
             for u in self._rm_states:
                 next_u, counterfactual_reward, counterfactual_done = self.rm.simulate_step(u, events)
-                reachable_states.add(next_u)
-                if self._valid_crm_states is not None and u not in self._valid_crm_states:
-                    continue
                 terminal = terminated or counterfactual_done
                 self.dqn.remember(
                     self._state(state, u),
@@ -89,7 +83,6 @@ class DQNRM:
                     None if terminal else self._state(new_state, next_u),
                     terminal,
                 )
-            self._valid_crm_states = reachable_states
         else:
             terminal = terminated or rm_done
             self.dqn.remember(

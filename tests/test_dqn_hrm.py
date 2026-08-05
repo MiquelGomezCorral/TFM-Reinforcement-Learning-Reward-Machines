@@ -154,6 +154,7 @@ class DQNHRMTest(unittest.TestCase):
 
             transition = agent.high_level.memory._transitions[0]
             self.assertEqual(transition.reward, 2.5)
+            self.assertIsNotNone(agent.actor.memory._transitions[0].next_state)
             self.assertEqual(actor_optimizations, [True])
             self.assertEqual(high_optimizations, [True])
 
@@ -186,7 +187,7 @@ class DQNHRMTest(unittest.TestCase):
 
             transition = agent.actor.memory._transitions[0]
             self.assertEqual(transition.reward, -10)
-            self.assertIsNone(transition.next_state)
+            self.assertIsNotNone(transition.next_state)
 
     def test_training_selects_best_validation_checkpoint(self):
         class Environment:

@@ -9,7 +9,9 @@ import torch
 
 from src.models.DQN import DQN, ReplayMemory
 from src.models.DQNRM import DQNRM
+from src.models.RewardMachine import RewardMachine
 from src.models.train_dqn import train_dqn
+from scripts.train_dqn import train_dqn_agent
 
 
 class TwoStepEnvironment:
@@ -45,6 +47,17 @@ def training_config(**overrides):
 
 
 class DQNTest(unittest.TestCase):
+    def test_one_passenger_reward_machine_completes_delivery(self):
+        models_path = Path(__file__).resolve().parents[1] / "models"
+        machine = RewardMachine(SimpleNamespace(MODELS_PATH=models_path), "rm_taxi_1p.txt")
+
+        self.assertEqual(machine.step({"p"}), (1, 5.0, False))
+        self.assertEqual(machine.step({"d", "del"}), (2, 20.0, True))
+
+    def test_crm_requires_reward_machine(self):
+        with self.assertRaisesRegex(ValueError, "use_crm requires use_rm=True"):
+            train_dqn_agent(SimpleNamespace(use_crm=True, use_rm=False))
+
     def test_replay_memory_discards_oldest_transition(self):
         memory = ReplayMemory(2)
         memory.push(np.array([0]), 0, 0, np.array([1]))
@@ -138,7 +151,7 @@ class DQNTest(unittest.TestCase):
             )
 
             self.assertFalse(done)
-            self.assertEqual(len(agent.dqn.memory), 2)
+            self.assertEqual(len(agent.dqn.memory), len(agent._rm_states))
             self.assertEqual(agent.dqn.batch_size, 20)
             self.assertEqual(agent.dqn.memory.rewarding_fraction, 0.25)
 
@@ -155,8 +168,7 @@ class DQNTest(unittest.TestCase):
                 use_crm=True,
             )
 
-            self.assertEqual(len(agent.dqn.memory), 3)
-            self.assertEqual(agent._valid_crm_states, {0, 2})
+            self.assertEqual(len(agent.dqn.memory), 2 * len(agent._rm_states))
 
             agent.update(
                 np.array([1, 0]),
@@ -171,42 +183,7 @@ class DQNTest(unittest.TestCase):
                 use_crm=True,
             )
 
-            self.assertEqual(len(agent.dqn.memory), 4)
-
-    def test_crm_reachability_recovers_after_only_terminal_states_are_reachable(self):
-        with tempfile.TemporaryDirectory() as models_path:
-            Path(models_path, "machine.txt").write_text(
-                "i:0\nf:2\n0;2;a;1\n1;2;a;1\n"
-            )
-            config = SimpleNamespace(
-                MODELS_PATH=models_path,
-                dqn_batch_size=10,
-                dqn_replay_capacity=10,
-                dqn_learning_rate=0.001,
-                gamma=0.9,
-                dqn_hidden_size=8,
-                dqn_tau=0.005,
-                dqn_gradient_clip=100,
-                use_crm=True,
-            )
-            env = SimpleNamespace(
-                observation_space=SimpleNamespace(shape=(2,)),
-                action_space=SimpleNamespace(n=2),
-            )
-            agent = DQNRM(config, env, "machine.txt")
-            update_args = (
-                np.array([1, 0]), 0, -1, 0, 0, np.array([0, 1]),
-                False, env,
-            )
-
-            agent.update(*update_args, lambda *_: {"a"}, use_crm=True)
-            self.assertEqual(agent._valid_crm_states, {2})
-
-            agent.update(*update_args, lambda *_: set(), use_crm=True)
-            self.assertEqual(agent._valid_crm_states, {0, 1})
-
-            agent.update(*update_args, lambda *_: set(), use_crm=True)
-            self.assertEqual(len(agent.dqn.memory), 4)
+            self.assertEqual(len(agent.dqn.memory), 3 * len(agent._rm_states))
 
     def test_crm_preserves_stronger_environment_penalties(self):
         with tempfile.TemporaryDirectory() as models_path:

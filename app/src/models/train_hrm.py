@@ -24,9 +24,7 @@ def _high_level_target(
     if terminated or rm_done:
         return discounted_return
 
-    return discounted_return + gamma ** (option_steps + 1) * qtable.max_high_value(
-        new_state, next_u
-    )
+    return discounted_return + qtable.max_high_value(new_state, next_u) * gamma ** (option_steps + 1)
 
 
 def train_qtable_hrm(

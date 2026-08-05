@@ -1,0 +1,1 @@
+nohup jupyter nbconvert --to notebook --execute --inplace notebooks/MultiTaxi-5x5-Benchmark-dqn.ipynb > logs/output.log 2>&1 &

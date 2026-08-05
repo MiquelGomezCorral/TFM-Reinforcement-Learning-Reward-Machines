@@ -7,39 +7,39 @@ from .HRM import HRM
 
 
 class DQNHRM(HRM):
-    def __init__(self, config, env, rm_file):
+    def __init__(self, CONFIG, env, rm_file):
         if len(env.observation_space.shape) != 1:
             raise ValueError("DQNHRM requires one-dimensional vector observations")
 
-        super().__init__(config, rm_file)
+        super().__init__(CONFIG, rm_file)
         self._rm_indices = {u: index for index, u in enumerate(self.rm_states)}
         self._valid_option_states = None
 
         observation_size = env.observation_space.shape[0]
         self.high_level = self._new_dqn(
-            config,
+            CONFIG,
             observation_size + len(self.rm_states),
             len(self.target_states),
         )
         self.actor = self._new_dqn(
-            config,
+            CONFIG,
             observation_size + len(self.rm_states) + len(self.target_states),
             env.action_space.n,
             sum(map(len, self.options.values())),
         )
 
     @staticmethod
-    def _new_dqn(config, input_size, action_size, batch_multiplier=1):
+    def _new_dqn(CONFIG, input_size, action_size, batch_multiplier=1):
         return DQN(
             input_size=input_size,
             action_size=action_size,
-            batch_size=config.dqn_batch_size * batch_multiplier,
-            replay_capacity=config.dqn_replay_capacity * batch_multiplier,
-            learning_rate=config.dqn_learning_rate,
-            gamma=config.gamma,
-            hidden_size=config.dqn_hidden_size,
-            tau=config.dqn_tau,
-            gradient_clip=config.dqn_gradient_clip,
+            batch_size=CONFIG.dqn_batch_size * batch_multiplier,
+            replay_capacity=CONFIG.dqn_replay_capacity * batch_multiplier,
+            learning_rate=CONFIG.dqn_learning_rate,
+            gamma=CONFIG.gamma,
+            hidden_size=CONFIG.dqn_hidden_size,
+            tau=CONFIG.dqn_tau,
+            gradient_clip=CONFIG.dqn_gradient_clip,
         )
 
     def reset_rm(self):

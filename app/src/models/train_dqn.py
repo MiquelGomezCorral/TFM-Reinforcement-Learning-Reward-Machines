@@ -10,43 +10,43 @@ from .DQNRM import DQNRM
 from .evaluate import evaluate_agent
 
 
-def train_dqn(config: Configuration, agent: DQN | DQNRM, get_propositions, env, progress_callback=None):
-    if config.dqn_epsilon_decay_steps <= 0:
+def train_dqn(CONFIG: Configuration, agent: DQN | DQNRM, get_propositions, env, progress_callback=None):
+    if CONFIG.dqn_epsilon_decay_steps <= 0:
         raise ValueError("dqn_epsilon_decay_steps must be positive")
-    if config.max_steps <= 0:
+    if CONFIG.max_steps <= 0:
         raise ValueError("max_steps must be positive")
-    optimize_interval = config.dqn_optimize_interval
+    optimize_interval = CONFIG.dqn_optimize_interval
     if optimize_interval <= 0:
         raise ValueError("dqn_optimize_interval must be positive")
-    if config.dqn_learning_starts < 0:
+    if CONFIG.dqn_learning_starts < 0:
         raise ValueError("dqn_learning_starts cannot be negative")
-    if config.dqn_checkpoint_interval <= 0:
+    if CONFIG.dqn_checkpoint_interval <= 0:
         raise ValueError("dqn_checkpoint_interval must be positive")
 
-    seed_dqn(config.seed)
-    seed_generator = seed_training(config.seed, env.action_space)
+    seed_dqn(CONFIG.seed)
+    seed_generator = seed_training(CONFIG.seed, env.action_space)
     steps = 0
     checkpoints = []
 
-    for episode in tqdm(range(config.n_training_episodes)):
+    for episode in tqdm(range(CONFIG.n_training_episodes)):
         seed = next_episode_seed(seed_generator)
         state, info = env.reset(seed=seed)
         raw_state = info.get("raw_state", state)
         if isinstance(agent, DQNRM):
             agent.reset_rm()
 
-        for _ in range(config.max_steps):
+        for _ in range(CONFIG.max_steps):
             epsilon = compute_epsilon(
-                config.min_epsilon,
-                config.max_epsilon,
+                CONFIG.min_epsilon,
+                CONFIG.max_epsilon,
                 steps,
-                1 / config.dqn_epsilon_decay_steps,
+                1 / CONFIG.dqn_epsilon_decay_steps,
             )
             action = agent.epsilon_greedy_policy(state, epsilon, env.action_space.sample)
             new_state, env_reward, terminated, truncated, info = env.step(action)
             new_raw_state = info.get("raw_state", new_state)
             optimize = (
-                steps + 1 >= config.dqn_learning_starts
+                steps + 1 >= CONFIG.dqn_learning_starts
                 and (steps + 1) % optimize_interval == 0
             )
 
@@ -61,7 +61,7 @@ def train_dqn(config: Configuration, agent: DQN | DQNRM, get_propositions, env, 
                     terminated,
                     env,
                     get_propositions,
-                    use_crm=config.use_crm,
+                    use_crm=CONFIG.use_crm,
                     optimize=optimize,
                 )
             else:
@@ -74,7 +74,7 @@ def train_dqn(config: Configuration, agent: DQN | DQNRM, get_propositions, env, 
             state = new_state
             raw_state = new_raw_state
 
-        if (episode + 1) % config.dqn_checkpoint_interval == 0:
+        if (episode + 1) % CONFIG.dqn_checkpoint_interval == 0:
             dqn = agent.dqn if isinstance(agent, DQNRM) else agent
             checkpoints.append((episode + 1, copy.deepcopy(dqn.policy_net.state_dict())))
         if progress_callback:
@@ -82,14 +82,14 @@ def train_dqn(config: Configuration, agent: DQN | DQNRM, get_propositions, env, 
 
     if checkpoints:
         dqn = agent.dqn if isinstance(agent, DQNRM) else agent
-        if checkpoints[-1][0] != config.n_training_episodes:
+        if checkpoints[-1][0] != CONFIG.n_training_episodes:
             checkpoints.append((
-                config.n_training_episodes,
+                CONFIG.n_training_episodes,
                 copy.deepcopy(dqn.policy_net.state_dict()),
             ))
-        rng = random.Random(config.dqn_validation_seed_base)
+        rng = random.Random(CONFIG.dqn_validation_seed_base)
         validation_seeds = [
-            rng.randrange(2**32) for _ in range(config.dqn_validation_episodes)
+            rng.randrange(2**32) for _ in range(CONFIG.dqn_validation_episodes)
         ]
         best_score = None
         best_episode = None
@@ -97,7 +97,7 @@ def train_dqn(config: Configuration, agent: DQN | DQNRM, get_propositions, env, 
         for checkpoint_episode, policy_state in checkpoints:
             dqn.policy_net.load_state_dict(policy_state)
             metrics = evaluate_agent(
-                config,
+                CONFIG,
                 agent,
                 get_propositions,
                 env,
@@ -118,7 +118,7 @@ def train_dqn(config: Configuration, agent: DQN | DQNRM, get_propositions, env, 
         dqn.target_net.load_state_dict(best_policy_state)
         print(
             f" - Restored episode {best_episode} checkpoint: "
-            f"validation_success={best_score[0]}/{config.dqn_validation_episodes}"
+            f"validation_success={best_score[0]}/{CONFIG.dqn_validation_episodes}"
         )
 
     return agent
