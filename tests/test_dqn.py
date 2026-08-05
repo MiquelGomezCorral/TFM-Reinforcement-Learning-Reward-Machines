@@ -26,6 +26,28 @@ class TwoStepEnvironment:
         return np.array([0, 1], dtype=np.float32), 1, self.steps == 2, False, {}
 
 
+class FourWorkerEnvironment:
+    num_envs = 4
+    action_space = SimpleNamespace(
+        seed=lambda _: None,
+        sample=lambda: np.zeros(4, dtype=np.int64),
+    )
+
+    def reset(self, seed=None):
+        return np.tile(np.array([1, 0], dtype=np.float32), (self.num_envs, 1)), {}
+
+    def step(self, actions):
+        if len(actions) != self.num_envs:
+            raise ValueError("Expected one action per worker")
+        return (
+            np.tile(np.array([1, 0], dtype=np.float32), (self.num_envs, 1)),
+            np.ones(self.num_envs, dtype=np.float32),
+            np.ones(self.num_envs, dtype=bool),
+            np.zeros(self.num_envs, dtype=bool),
+            {"final_obs": np.tile(np.array([0, 1], dtype=np.float32), (self.num_envs, 1))},
+        )
+
+
 def training_config(**overrides):
     values = {
         "seed": 1,
@@ -36,6 +58,7 @@ def training_config(**overrides):
         "dqn_epsilon_decay_steps": 10,
         "dqn_optimize_interval": 1,
         "dqn_learning_starts": 0,
+        "dqn_num_envs": 1,
         "dqn_checkpoint_interval": 100,
         "dqn_validation_episodes": 10,
         "dqn_validation_seed_base": 7,
@@ -236,6 +259,21 @@ class DQNTest(unittest.TestCase):
         train_dqn(config, agent, None, TwoStepEnvironment())
 
         self.assertEqual(len(optimize_calls), 1)
+
+    def test_vector_training_collects_one_transition_per_worker_before_optimizing(self):
+        config = training_config(
+            n_training_episodes=8,
+            dqn_num_envs=4,
+            dqn_optimize_interval=3,
+        )
+        agent = DQN(2, 2, 10, 10, 0.01, 0.9, 8, 0.005, 100)
+        optimize_calls = []
+        agent.optimize = lambda: optimize_calls.append(True)
+
+        train_dqn(config, agent, None, FourWorkerEnvironment())
+
+        self.assertEqual(len(agent.memory), 8)
+        self.assertEqual(optimize_calls, [True, True])
 
     def test_training_selects_best_validation_checkpoint(self):
         class Environment:

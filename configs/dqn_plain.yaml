@@ -27,3 +27,5 @@ dqn_hidden_size: 128
 dqn_tau: 0.005
 dqn_gradient_clip: 100
 dqn_optimize_interval: 4
+dqn_learning_starts: 400
+dqn_num_envs: 8

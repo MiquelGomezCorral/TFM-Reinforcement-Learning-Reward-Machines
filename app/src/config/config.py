@@ -75,6 +75,7 @@ class Configuration:
     dqn_epsilon_decay_steps: int = 2500
     dqn_optimize_interval: int = 4
     dqn_learning_starts: int = 0
+    dqn_num_envs: int = 1
     dqn_checkpoint_interval: int = 5000
     dqn_validation_episodes: int = 200
     dqn_validation_seed_base: int = 20260719

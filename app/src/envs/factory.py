@@ -1,3 +1,5 @@
+from functools import partial
+
 import gymnasium as gym
 import minigrid  # Registers MiniGrid environments with Gymnasium.
 
@@ -40,3 +42,19 @@ def create_environment(
         env = OneHotDiscreteWrapper(env)
 
     return env, get_propositions
+
+
+def _create_time_limited_environment(CONFIG, one_hot_discrete):
+    env, _ = create_environment(CONFIG, one_hot_discrete)
+    return gym.wrappers.TimeLimit(env, max_episode_steps=CONFIG.max_steps)
+
+
+def create_vector_environment(CONFIG: Configuration, num_envs: int, one_hot_discrete: bool = False):
+    if num_envs <= 0:
+        raise ValueError("num_envs must be positive")
+
+    return gym.vector.AsyncVectorEnv(
+        [partial(_create_time_limited_environment, CONFIG, one_hot_discrete) for _ in range(num_envs)],
+        context="spawn",
+        autoreset_mode=gym.vector.AutoresetMode.SAME_STEP,
+    )

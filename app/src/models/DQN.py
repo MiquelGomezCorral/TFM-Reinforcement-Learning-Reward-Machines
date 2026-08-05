@@ -142,6 +142,25 @@ class DQN:
             return self.greedy_policy(state)
         return sample_action() if sample_action else random.randrange(self.action_size)
 
+    def epsilon_greedy_policies(self, states, epsilon, sample_actions=None):
+        states = np.asarray(states, dtype=np.float32)
+        explore = np.array([random.random() <= epsilon for _ in states])
+        actions = np.empty(len(states), dtype=np.int64)
+
+        if np.any(~explore):
+            state_tensor = torch.as_tensor(states[~explore], dtype=torch.float32, device=self.device)
+            with torch.no_grad():
+                actions[~explore] = self.policy_net(state_tensor).argmax(dim=1).cpu().numpy()
+
+        if np.any(explore):
+            if sample_actions:
+                sampled_actions = np.asarray(sample_actions())
+                actions[explore] = sampled_actions[explore]
+            else:
+                actions[explore] = [random.randrange(self.action_size) for _ in range(explore.sum())]
+
+        return actions
+
     def update(self, state, action, reward, next_state, terminal, optimize=True):
         self.remember(state, action, reward, next_state, terminal)
         return self.optimize() if optimize else None
