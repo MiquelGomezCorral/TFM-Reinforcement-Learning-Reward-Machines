@@ -1,14 +1,11 @@
 import copy
 import random
 
-import numpy as np
-from tqdm import tqdm
-
 from src.config import Configuration
-from src.utils import compute_epsilon, next_episode_seed, seed_dqn, seed_training
+from src.utils import seed_dqn
 from .DQNHRM import DQNHRM
-from .HRM import option_reward
 from .evaluate import evaluate_agent
+from .train_hrm import train_hrm
 
 
 def train_dqn_hrm(CONFIG: Configuration, agent: DQNHRM, get_propositions, env, progress_callback=None):
@@ -22,120 +19,19 @@ def train_dqn_hrm(CONFIG: Configuration, agent: DQNHRM, get_propositions, env, p
         raise ValueError("dqn_checkpoint_interval must be positive")
 
     seed_dqn(CONFIG.seed)
-    seed_generator = seed_training(CONFIG.seed, env.action_space)
-    steps = 0
     checkpoints = []
 
-    for episode in tqdm(range(CONFIG.n_training_episodes)):
-        state, info = env.reset(seed=next_episode_seed(seed_generator))
-        raw_state = info.get("raw_state", state)
-        agent.reset_rm()
-
-        option_start_state = None
-        option_start_u = None
-        option_return = 0
-        option_steps = 0
-
-        for step in range(CONFIG.max_steps):
-            epsilon = compute_epsilon(
-                CONFIG.min_epsilon,
-                CONFIG.max_epsilon,
-                steps,
-                1 / CONFIG.dqn_epsilon_decay_steps,
-            )
-            current_u = agent.get_rm_state()
-            if agent.active_option is None:
-                option_start_state = np.array(state, dtype=np.float32, copy=True)
-                option_start_u = current_u
-                agent.select_option(state, epsilon, current_u)
-                option_return = 0
-                option_steps = 0
-
-            active_option = agent.active_option
-            action = agent.epsilon_greedy_policy(state, epsilon, env.action_space.sample)
-            new_state, env_reward, terminated, truncated, info = env.step(action)
-            new_raw_state = info.get("raw_state", new_state)
-            events = get_propositions(env, raw_state, action, new_raw_state)
-            next_u, reward, rm_done = agent.step_rm(events)
-            time_limit = step == CONFIG.max_steps - 1
-
-            reachable_states = set()
-            for counterfactual_u, targets in agent.options.items():
-                counterfactual_next_u, counterfactual_reward, _ = agent.rm.simulate_step(
-                    counterfactual_u, events
-                )
-                reachable_states.add(counterfactual_next_u)
-                if (
-                    agent._valid_option_states is not None
-                    and counterfactual_u not in agent._valid_option_states
-                ):
-                    continue
-                option_done = terminated or counterfactual_next_u != counterfactual_u
-                replay_terminal = option_done
-                for target_u in targets:
-                    shaped_reward = option_reward(
-                        env_reward if info.get("invalid_action", False) else counterfactual_reward,
-                        target_u,
-                        counterfactual_next_u,
-                        option_done,
-                        CONFIG.hrm_r_plus,
-                        CONFIG.hrm_r_minus,
-                    )
-                    agent.actor.remember(
-                        agent.actor_state(state, counterfactual_u, target_u),
-                        action,
-                        shaped_reward,
-                        None if replay_terminal else agent.actor_state(
-                            new_state, counterfactual_u, target_u
-                        ),
-                        replay_terminal,
-                    )
-            agent._valid_option_states = reachable_states
-
-            discounted_return = option_return + CONFIG.gamma**option_steps * reward
-            option_done = terminated or truncated or time_limit or next_u != current_u
-            if option_done:
-                high_target = discounted_return
-                if not terminated and not rm_done:
-                    high_target += CONFIG.gamma ** (option_steps + 1) * agent.max_high_value(
-                        new_state, next_u
-                    )
-                # The SMDP bootstrap is already included in high_target.
-                agent.high_level.update(
-                    agent.high_state(option_start_state, option_start_u),
-                    agent.target_action(active_option),
-                    high_target,
-                    None,
-                    True,
-                    optimize=False,
-                )
-                agent.active_option = None
-            else:
-                option_return = discounted_return
-                option_steps += 1
-
-            learning_started = steps + 1 >= CONFIG.dqn_learning_starts
-            if (
-                learning_started
-                and (steps + 1) % CONFIG.dqn_optimize_interval == 0
-            ):
-                agent.actor.optimize()
-                agent.high_level.optimize()
-
-            steps += 1
-            if terminated or truncated or rm_done:
-                break
-            state = new_state
-            raw_state = new_raw_state
-
-        if (episode + 1) % CONFIG.dqn_checkpoint_interval == 0:
+    def checkpoint(episode, trained_agent, _env, _get_propositions):
+        if episode % CONFIG.dqn_checkpoint_interval == 0:
             checkpoints.append((
-                episode + 1,
-                copy.deepcopy(agent.high_level.policy_net.state_dict()),
-                copy.deepcopy(agent.actor.policy_net.state_dict()),
+                episode,
+                copy.deepcopy(trained_agent.high_level.policy_net.state_dict()),
+                copy.deepcopy(trained_agent.actor.policy_net.state_dict()),
             ))
         if progress_callback:
-            progress_callback(episode + 1, agent, env, get_propositions)
+            progress_callback(episode, trained_agent, _env, _get_propositions)
+
+    agent = train_hrm(CONFIG, agent, get_propositions, env, checkpoint)
 
     if checkpoints:
         if checkpoints[-1][0] != CONFIG.n_training_episodes:

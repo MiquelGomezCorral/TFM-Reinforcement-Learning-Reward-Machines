@@ -2,8 +2,10 @@ import random
 
 import numpy as np
 
+from src.utils import compute_epsilon
+
 from .DQN import DQN
-from .HRM import HRM
+from .HRM import HRM, option_reward
 
 
 class DQNHRM(HRM):
@@ -108,3 +110,64 @@ class DQNHRM(HRM):
             epsilon,
             sample_action,
         )
+
+    def training_epsilon(self, _episode, total_steps):
+        return compute_epsilon(
+            self.config.min_epsilon,
+            self.config.max_epsilon,
+            total_steps,
+            1 / self.config.dqn_epsilon_decay_steps,
+        )
+
+    def counterfactual_update(
+        self,
+        events,
+        terminated,
+        state,
+        action,
+        new_state,
+        env_reward,
+        invalid_action,
+    ):
+        reachable_states = set()
+        for counterfactual_u, targets in self.options.items():
+            counterfactual_next_u, counterfactual_reward, _ = self.rm.simulate_step(
+                counterfactual_u, events
+            )
+            reachable_states.add(counterfactual_next_u)
+            if (
+                self._valid_option_states is not None
+                and counterfactual_u not in self._valid_option_states
+            ):
+                continue
+            option_done = terminated or counterfactual_next_u != counterfactual_u
+            for target_u in targets:
+                shaped_reward = option_reward(
+                    env_reward if invalid_action else counterfactual_reward,
+                    target_u,
+                    counterfactual_next_u,
+                    option_done,
+                    self.config.hrm_r_plus,
+                    self.config.hrm_r_minus,
+                )
+                self.actor.remember(
+                    self.actor_state(state, counterfactual_u, target_u),
+                    action,
+                    shaped_reward,
+                    None if option_done else self.actor_state(
+                        new_state, counterfactual_u, target_u
+                    ),
+                    option_done,
+                )
+        self._valid_option_states = reachable_states
+
+    def update_high_level(self, state, action, target, _new_state, _next_u):
+        self.high_level.update(state, action, target, None, True, optimize=False)
+
+    def optimize_training_step(self, total_steps):
+        if (
+            total_steps >= self.config.dqn_learning_starts
+            and total_steps % self.config.dqn_optimize_interval == 0
+        ):
+            self.actor.optimize()
+            self.high_level.optimize()

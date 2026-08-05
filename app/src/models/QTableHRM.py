@@ -17,7 +17,6 @@ class QTableHRM(HRM):
         environment actions while pursuing the selected option.
         """
         super().__init__(config, rm_file)
-        self.config = config
         self.high_level = QTable(
             None,
             len(self.target_states),
@@ -89,7 +88,7 @@ class QTableHRM(HRM):
 
         return self.actor.greedy_policy(self.actor_state(state, u, self.active_option))
 
-    def epsilon_greedy_policy(self, state, epsilon, env) -> int:
+    def epsilon_greedy_policy(self, state, epsilon, sample_action=None) -> int:
         """Select an epsilon-greedy environment action under the active option."""
         u = self.get_rm_state()
 
@@ -99,10 +98,19 @@ class QTableHRM(HRM):
         return self.actor.epsilon_greedy_policy(
             self.actor_state(state, u, self.active_option),
             epsilon,
-            env.action_space.sample,
+            sample_action,
         )
 
-    def counterfactual_update(self, events: list, terminated: bool, state, action, new_state) -> None:
+    def counterfactual_update(
+        self,
+        events: list,
+        terminated: bool,
+        state,
+        action,
+        new_state,
+        _env_reward,
+        _invalid_action,
+    ) -> None:
         """Update all actor tables for the same environment transition."""
         reachable_states = set()
         for counterfactual_u, targets in self.options.items():
@@ -135,3 +143,14 @@ class QTableHRM(HRM):
                     self.config.learning_rate,
                 )
         self._valid_option_states = reachable_states
+
+    def update_high_level(self, state, action, target, new_state, next_u) -> None:
+        self.high_level.update(
+            state,
+            action,
+            target,
+            self.high_state(new_state, next_u),
+            True,
+            self.config.gamma,
+            self.config.learning_rate,
+        )

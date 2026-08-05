@@ -1,3 +1,5 @@
+from src.utils import compute_epsilon
+
 from .RewardMachine import RewardMachine
 
 
@@ -11,6 +13,7 @@ def option_reward(base_reward, target_u, next_u, option_done, r_plus, r_minus):
 
 class HRM:
     def __init__(self, config, rm_file):
+        self.config = config
         self.rm = RewardMachine(config, rm_file)
         self.rm_states = tuple(sorted(self.rm.states))
         self.target_states = tuple(sorted({*self.rm_states, self.rm.final_state}))
@@ -45,3 +48,14 @@ class HRM:
         if next_u != current_u or done:
             self.active_option = None
         return next_u, reward, done
+
+    def training_epsilon(self, episode, _total_steps):
+        return compute_epsilon(
+            self.config.min_epsilon,
+            self.config.max_epsilon,
+            episode,
+            self.config.decay_rate,
+        )
+
+    def optimize_training_step(self, _total_steps):
+        pass

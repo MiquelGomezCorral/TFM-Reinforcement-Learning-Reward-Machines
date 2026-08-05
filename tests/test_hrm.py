@@ -8,7 +8,7 @@ import numpy as np
 from src.envs import create_environment
 from src.models.QTableHRM import QTableHRM
 from src.models.HRM import option_reward
-from src.models.train_hrm import train_qtable_hrm
+from src.models.train_hrm import train_hrm
 
 
 class ActionSpace:
@@ -83,7 +83,7 @@ class HRMTest(unittest.TestCase):
                 [0, 0],
             )
 
-            train_qtable_hrm(
+            train_hrm(
                 test_config,
                 model,
                 lambda _env, _state, action, _new_state: {"go"} if action == 1 else set(),
@@ -179,7 +179,7 @@ class HRMTest(unittest.TestCase):
             model = QTableHRM(config(models_path), env, "machine.txt")
             model.high_level.values(model.high_state(0, 0))[model.target_action(1)] = 1
 
-            train_qtable_hrm(
+            train_hrm(
                 config(models_path),
                 model,
                 lambda _env, _state, _action, new_state: {"go"} if new_state == 2 else set(),
@@ -224,7 +224,7 @@ class HRMTest(unittest.TestCase):
             test_config = config(models_path, max_steps=2)
             model = QTableHRM(test_config, env, "machine.txt")
 
-            train_qtable_hrm(test_config, model, lambda *_: {"a"}, env)
+            train_hrm(test_config, model, lambda *_: {"a"}, env)
 
             self.assertNotIn(model.actor_state(1, 0, 1), model.actor._table)
 
@@ -247,7 +247,7 @@ class HRMTest(unittest.TestCase):
             model = QTableHRM(test_config, env, "machine.txt")
             model.actor.values(model.actor_state(1, 1, 2))[0] = 4
 
-            train_qtable_hrm(test_config, model, lambda *_: set(), env)
+            train_hrm(test_config, model, lambda *_: set(), env)
 
             self.assertEqual(
                 model.actor.values(model.actor_state(0, 1, 2))[0],
@@ -281,7 +281,7 @@ class HRMTest(unittest.TestCase):
                     next_values = model.high_level.values(model.high_state(1, 0))
                     next_values[model.target_action(0)] = 4
 
-                    train_qtable_hrm(test_config, model, lambda *_: set(), env)
+                    train_hrm(test_config, model, lambda *_: set(), env)
 
                     self.assertEqual(values[model.target_action(1)], 1)
                     self.assertIsNone(model.active_option)

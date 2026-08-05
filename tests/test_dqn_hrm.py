@@ -189,6 +189,46 @@ class DQNHRMTest(unittest.TestCase):
             self.assertEqual(transition.reward, -10)
             self.assertIsNotNone(transition.next_state)
 
+    def test_training_decays_epsilon_each_step(self):
+        class Environment:
+            observation_space = SimpleNamespace(shape=(2,))
+            action_space = ActionSpace()
+
+            def reset(self, seed=None):
+                self.steps = 0
+                return np.array([1, 0], dtype=np.float32), {}
+
+            def step(self, _action):
+                self.steps += 1
+                return np.array([1, 0], dtype=np.float32), 0, False, self.steps == 2, {}
+
+        with tempfile.TemporaryDirectory() as models_path:
+            Path(models_path, "machine.txt").write_text(
+                "i:0\nf:1\nr:0\n0;1;go;0\n"
+            )
+            test_config = config(
+                models_path,
+                max_steps=2,
+                min_epsilon=0,
+                max_epsilon=1,
+                dqn_epsilon_decay_steps=1,
+            )
+            env = Environment()
+            agent = DQNHRM(test_config, env, "machine.txt")
+            epsilons = []
+            agent.epsilon_greedy_policy = (
+                lambda _state, epsilon, _sample: epsilons.append(epsilon) or 0
+            )
+
+            train_dqn_hrm(
+                test_config,
+                agent,
+                lambda *_: set(),
+                env,
+            )
+
+            self.assertEqual(epsilons, [1, np.exp(-1)])
+
     def test_training_selects_best_validation_checkpoint(self):
         class Environment:
             observation_space = SimpleNamespace(shape=(2,))

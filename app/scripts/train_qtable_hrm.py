@@ -2,7 +2,7 @@ from maikol_utils.print_utils import print_separator
 
 from src.config import Configuration
 from src.envs import create_environment
-from src.models import QTableHRM, evaluate_agent, train_qtable_hrm
+from src.models import QTableHRM, evaluate_agent, train_hrm
 from src.utils import record_video
 
 
@@ -26,7 +26,7 @@ def train_hrm_agent(CONFIG: Configuration, progress_callback=None):
     #                               TRAINING
     # ==================================================================
     print_separator("TRAINING", sep_type="SUPER")
-    qtable = train_qtable_hrm(CONFIG, qtable, get_propositions, env, progress_callback)
+    qtable = train_hrm(CONFIG, qtable, get_propositions, env, progress_callback)
 
     # ==================================================================
     #                               TESTING
