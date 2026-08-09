@@ -4,9 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+
 class BenchmarkNotebookTest(unittest.TestCase):
-    def load_notebook_scope(self):
-        notebook = json.loads(Path("notebooks/MultiTaxi-5x5-Benchmark.ipynb").read_text(encoding="utf-8"))
+    def load_notebook_scope(self, filename):
+        notebook = json.loads(Path(filename).read_text(encoding="utf-8"))
         scope = {}
         working_directory = Path.cwd()
         os.chdir("app")
@@ -15,20 +16,16 @@ class BenchmarkNotebookTest(unittest.TestCase):
             exec("".join(notebook["cells"][cell_index]["source"]), scope)
         return notebook, scope
 
-    def test_results_reject_a_different_benchmark_spec(self):
-        notebook, scope = self.load_notebook_scope()
+    def test_q_benchmark_rejects_a_different_specification(self):
+        notebook, scope = self.load_notebook_scope("notebooks/MultiTaxi-5x5-Benchmark-q.ipynb")
         source = "".join(
             line
             for cell in notebook["cells"]
             for line in cell.get("source", [])
         )
-        self.assertIn(
-            "from scripts import train_dqn_agent, train_hrm_agent, train_qt",
-            source,
-        )
-        self.assertIn("'qtable': train_qt", source)
-        self.assertIn("'hrm': train_hrm_agent", source)
-        self.assertIn("'dqn': train_dqn_agent", source)
+        self.assertIn("from scripts import train_qt_hrm_agent, train_qt", source)
+        self.assertIn("'qt': train_qt", source)
+        self.assertIn("'qt_hrm': train_qt_hrm_agent", source)
         self.assertIn("'variant_id': variant['id']", source)
         self.assertIn("'kind': variant['kind']", source)
         self.assertIn("'config': variant['config']", source)
@@ -53,67 +50,106 @@ class BenchmarkNotebookTest(unittest.TestCase):
                 scope["load_runs"]()
 
             variants = {variant["id"]: variant for variant in scope["BENCHMARK_SPEC"]["variants"]}
-            self.assertFalse(variants["qlearning"]["use_rm"])
-            self.assertFalse(variants["qrm"]["use_crm"])
-            self.assertTrue(variants["qrm_crm"]["use_crm"])
-            self.assertEqual(variants["qrm"]["resolved"]["multitaxi_grid_size"], 10)
-            self.assertIn("multitaxi_grid_size: 5", variants["qrm"]["yaml"])
+            self.assertFalse(variants["qt"]["use_rm"])
+            self.assertFalse(variants["qt_rm"]["use_crm"])
+            self.assertTrue(variants["qt_crm"]["use_crm"])
+            self.assertEqual(variants["qt_rm"]["resolved"]["multitaxi_grid_size"], 10)
+            self.assertIn("multitaxi_grid_size: 5", variants["qt_rm"]["yaml"])
             self.assertEqual(scope["BENCHMARK_SPEC"]["training_seeds"], list(range(42, 52)))
 
             scope["BENCHMARK_SPEC"] = {"changed": True}
             with self.assertRaisesRegex(ValueError, "benchmark specification"):
                 scope["load_runs"]()
 
-    def test_rerun_replaces_run_and_persists_step_metrics(self):
-        notebook, scope = self.load_notebook_scope()
+    def test_dqn_benchmark_uses_post_training_metrics(self):
+        notebook, scope = self.load_notebook_scope("notebooks/MultiTaxi-5x5-Benchmark-dqn.ipynb")
+        source = "".join(
+            line
+            for cell in notebook["cells"]
+            for line in cell.get("source", [])
+        )
+        self.assertIn("class BenchmarkVariant", source)
+        self.assertNotIn("_LogTee", source)
+        self.assertNotIn("RUNNERS", source)
+        self.assertNotIn("BENCHMARK_SPEC", source)
+        self.assertNotIn("pipeline_seconds", source)
+        self.assertTrue(all(
+            cell["execution_count"] is None and not cell["outputs"]
+            for cell in notebook["cells"]
+            if cell["cell_type"] == "code"
+        ))
+
+        convergence_metrics = {
+            "successes": 1,
+            "episodes": 1,
+            "invalid_actions": 0,
+            "mean_reward": 1.0,
+            "reward_std": 0.0,
+            "successful_std": 0.0,
+            "mean_successful_steps": 2.0,
+            "worst_reward": 1.0,
+        }
+        final_metrics = {**convergence_metrics, "mean_reward": 2.0}
 
         with tempfile.TemporaryDirectory() as directory:
-            scope["RESULTS_PATH"] = Path(directory, "results.json")
-            scope["CONVERGENCE_PATH"] = Path(directory, "convergence.json")
-            scope["BENCHMARK"].VIDEO_PATH = str(Path(directory, "videos"))
-            scope["BENCHMARK"].n_training_episodes = 1
-            scope["BENCHMARK"].convergence_interval = 1
-            scope["TRAINING_SEEDS"] = (42,)
-            scope["VARIANTS"] = (scope["VARIANTS"][0],)
-            scope["VARIANTS_BY_ID"] = {"qlearning": scope["VARIANTS"][0]}
-            scope["evaluate_agent"] = lambda *_args, **_kwargs: {
-                "successes": 1,
-                "episodes": 1,
-                "invalid_actions": 0,
-                "mean_reward": 1.0,
-                "reward_std": 0.0,
-                "successful_std": 0.0,
-                "mean_successful_steps": 2.0,
-                "worst_reward": 1.0,
-            }
-            scope["RUNNERS"] = {
-                "qtable": lambda _config, progress_callback: (
-                    progress_callback(1, object(), None, None),
-                    (1.0, 0.0),
-                )[1],
-            }
+            benchmark = scope["BENCHMARK"]
+            benchmark.DATA_PATH = directory
+            benchmark.VIDEO_PATH = str(Path(directory, "videos"))
+            benchmark.n_training_episodes = 1
+            benchmark.convergence_interval = 1
+            benchmark.training_seeds = (42,)
+            benchmark.variants = (benchmark.variants[0],)
+            evaluation_seeds = []
 
-            exec("".join(notebook["cells"][4]["source"]), scope)
+            def evaluate(_config, _agent, _get_propositions, _env, **kwargs):
+                evaluation_seeds.append(kwargs["seeds"])
+                return convergence_metrics
+
+            scope["evaluate_agent"] = evaluate
+
+            def train(_config, progress_callback):
+                progress_callback(1, object(), None, None)
+                return final_metrics
+
+            scope["train_dqn_agent"] = train
             exec("".join(notebook["cells"][4]["source"]), scope)
 
             runs = scope["load_runs"]()
             self.assertEqual(len(runs), 1)
-            self.assertEqual(len(runs[0]["convergence"]), 1)
-            self.assertEqual(runs[0]["metrics"]["mean_successful_steps"], 2.0)
+            self.assertEqual(runs[0]["metrics"], final_metrics)
+            self.assertEqual(runs[0]["convergence"][0]["metrics"], convergence_metrics)
+            self.assertEqual(runs[0]["evaluation_seeds"], evaluation_seeds[0])
+            self.assertEqual(scope["completed_runs"](), runs)
 
-            def fail_training(*_args, **_kwargs):
-                raise RuntimeError("training failed")
+            benchmark.n_training_episodes = 3
+            benchmark.convergence_interval = 2
+            partial_run = {**runs[0], "convergence": [{"episode": 3, "metrics": convergence_metrics}]}
+            self.assertFalse(scope["completed_run"](partial_run))
+            benchmark.n_training_episodes = 1
+            benchmark.convergence_interval = 1
 
-            scope["RUNNERS"] = {"qtable": fail_training}
-            with self.assertRaisesRegex(RuntimeError, "training failed"):
-                exec("".join(notebook["cells"][4]["source"]), scope)
-            self.assertEqual(scope["load_runs"]()[0]["metrics"]["mean_successful_steps"], 2.0)
+            scope["save_runs"]([])
+            with self.assertRaisesRegex(ValueError, "Benchmark is incomplete"):
+                scope["completed_runs"]()
 
+            scope["save_runs"](runs)
             shown_traces = []
             scope["go"].Figure.show = lambda figure: shown_traces.append(len(figure.data))
-            for cell_index in (5, 6, 7):
+            for cell_index in (5, 6, 7, 9):
                 exec("".join(notebook["cells"][cell_index]["source"]), scope)
             self.assertEqual(shown_traces, [2, 1])
+
+    def test_dqn_benchmark_uses_distinct_evaluation_seeds_per_run(self):
+        _, scope = self.load_notebook_scope("notebooks/MultiTaxi-5x5-Benchmark-dqn.ipynb")
+        benchmark = scope["BENCHMARK"]
+        benchmark.training_seeds = (42, 43)
+        benchmark.variants = (benchmark.variants[0],)
+
+        first = benchmark.config_for(42, benchmark.variants[0])
+        second = benchmark.config_for(43, benchmark.variants[0])
+
+        self.assertNotEqual(first.eval_seed, second.eval_seed)
+        self.assertTrue(set(first.eval_seed).isdisjoint(second.eval_seed))
 
 
 if __name__ == "__main__":
