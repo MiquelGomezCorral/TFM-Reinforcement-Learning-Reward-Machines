@@ -6,7 +6,6 @@ everywhere and considered configuration.
 import os
 import random
 from dataclasses import dataclass
-from typing import Callable
 
 from maikol_utils.file_utils import make_dirs
 import yaml
@@ -49,7 +48,6 @@ class Configuration:
     eval_seed_base: int | None = None
     use_rm: bool = False        # Whether to use the RM or not
     use_crm: bool = False       # Whether to use the CRM or not
-    parse_state: Callable = None
     dynamic_qtable: bool = True
     multitaxi_grid_size: int = 5
     multitaxi_num_passengers: int = 2

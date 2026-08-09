@@ -30,58 +30,23 @@ class DQNNetwork(nn.Module):
 
 
 class ReplayMemory:
-    def __init__(self, capacity, rewarding_fraction=0.25):
+    def __init__(self, capacity):
         if capacity <= 0:
             raise ValueError("Replay capacity must be positive")
         self.capacity = capacity
-        self.rewarding_fraction = rewarding_fraction
         self._transitions = []
         self._position = 0
-        self._rewarding_slots = []
-        self._rewarding_indices = {}
 
     def push(self, state, action, reward, next_state):
         transition = Transition(state, action, reward, next_state)
         if len(self._transitions) == self.capacity:
-            self._remove_rewarding_slot(self._position)
             self._transitions[self._position] = transition
         else:
             self._transitions.append(transition)
-        if reward > 0:
-            self._rewarding_indices[self._position] = len(self._rewarding_slots)
-            self._rewarding_slots.append(self._position)
         self._position = (self._position + 1) % self.capacity
 
-    def _remove_rewarding_slot(self, slot):
-        index = self._rewarding_indices.pop(slot, None)
-        if index is None:
-            return
-        last_slot = self._rewarding_slots.pop()
-        if index < len(self._rewarding_slots):
-            self._rewarding_slots[index] = last_slot
-            self._rewarding_indices[last_slot] = index
-
     def sample(self, batch_size):
-        slots = random.sample(range(len(self._transitions)), batch_size)
-        rewarding_target = (
-            max(1, int(batch_size * self.rewarding_fraction))
-            if self.rewarding_fraction > 0 else 0
-        )
-        rewarding_count = min(len(self._rewarding_slots), batch_size, rewarding_target)
-        selected = set(slots)
-        missing = rewarding_count - sum(slot in self._rewarding_indices for slot in slots)
-        replace_index = 0
-        while missing > 0:
-            rewarding_slot = random.choice(self._rewarding_slots)
-            if rewarding_slot in selected:
-                continue
-            while slots[replace_index] in self._rewarding_indices:
-                replace_index += 1
-            selected.remove(slots[replace_index])
-            selected.add(rewarding_slot)
-            slots[replace_index] = rewarding_slot
-            missing -= 1
-        return [self._transitions[slot] for slot in slots]
+        return random.sample(self._transitions, batch_size)
 
     def __len__(self):
         return len(self._transitions)
@@ -99,7 +64,6 @@ class DQN:
         hidden_size,
         tau,
         gradient_clip,
-        rewarding_fraction=0.25,
     ):
         self.action_size = action_size
         self.batch_size = batch_size
@@ -110,8 +74,8 @@ class DQN:
         self.policy_net = DQNNetwork(input_size, action_size, hidden_size).to(self.device)
         self.target_net = DQNNetwork(input_size, action_size, hidden_size).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=learning_rate, amsgrad=True)
-        self.memory = ReplayMemory(replay_capacity, rewarding_fraction)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=learning_rate, amsgrad=True)
+        self.memory = ReplayMemory(replay_capacity)
 
     @staticmethod
     def _device():

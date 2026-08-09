@@ -32,7 +32,6 @@ def config(models_path, **overrides):
         "decay_rate": 0,
         "gamma": 0.5,
         "learning_rate": 1,
-        "parse_state": None,
         "hrm_r_plus": 1,
         "hrm_r_minus": -1,
         "hrm_q_init": 0,

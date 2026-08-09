@@ -54,7 +54,7 @@ class QTableTest(unittest.TestCase):
     def test_reward_machine_bootstraps_from_target_table(self):
         with tempfile.TemporaryDirectory() as models_path:
             Path(models_path, "machine.txt").write_text("i:0\nf:2\n0;1;a;3\n1;2;b;3\n")
-            config = SimpleNamespace(MODELS_PATH=models_path)
+            config = SimpleNamespace(MODELS_PATH=models_path, gamma=0.5, learning_rate=1)
             env = SimpleNamespace(
                 action_space=SimpleNamespace(n=2, sample=lambda: 1),
                 observation_space=SimpleNamespace(n=2),
@@ -64,7 +64,7 @@ class QTableTest(unittest.TestCase):
             q_table._q_table(1).update(1, 0, 4, 1, True, 0.9, 1)
 
             done = q_table.update(
-                0, 1, 0, 0, 1, 1, 0.5, 1, env,
+                0, 1, 0, 0, 1, 1, env,
                 lambda _, __, ___, ____: {"a"},
             )
 
@@ -75,7 +75,7 @@ class QTableTest(unittest.TestCase):
     def test_reward_machine_terminal_target_does_not_bootstrap(self):
         with tempfile.TemporaryDirectory() as models_path:
             Path(models_path, "machine.txt").write_text("i:0\nf:1\n0;1;a;3\n")
-            config = SimpleNamespace(MODELS_PATH=models_path)
+            config = SimpleNamespace(MODELS_PATH=models_path, gamma=0.5, learning_rate=1)
             env = SimpleNamespace(
                 action_space=SimpleNamespace(n=2, sample=lambda: 1),
                 observation_space=SimpleNamespace(n=2),
@@ -84,7 +84,7 @@ class QTableTest(unittest.TestCase):
             q_table._q_table(1).update(1, 0, 10, 1, True, 0.9, 1)
 
             done = q_table.update(
-                0, 1, 0, 0, 1, 1, 0.5, 1, env,
+                0, 1, 0, 0, 1, 1, env,
                 lambda _, __, ___, ____: {"a"},
             )
 
@@ -94,7 +94,7 @@ class QTableTest(unittest.TestCase):
     def test_environment_terminal_target_does_not_bootstrap(self):
         with tempfile.TemporaryDirectory() as models_path:
             Path(models_path, "machine.txt").write_text("i:0\nf:2\n0;1;a;3\n1;2;b;3\n")
-            config = SimpleNamespace(MODELS_PATH=models_path)
+            config = SimpleNamespace(MODELS_PATH=models_path, gamma=0.5, learning_rate=1)
             env = SimpleNamespace(
                 action_space=SimpleNamespace(n=2, sample=lambda: 1),
                 observation_space=SimpleNamespace(n=2),
@@ -103,7 +103,7 @@ class QTableTest(unittest.TestCase):
             q_table._q_table(1).update(1, 0, 10, 1, True, 0.9, 1)
 
             q_table.update(
-                0, 1, 0, 0, 1, 1, 0.5, 1, env,
+                0, 1, 0, 0, 1, 1, env,
                 lambda _, __, ___, ____: {"a"}, terminated=True,
             )
 
@@ -112,7 +112,7 @@ class QTableTest(unittest.TestCase):
     def test_crm_updates_initial_reward_machine_state(self):
         with tempfile.TemporaryDirectory() as models_path:
             Path(models_path, "machine.txt").write_text("i:0\nf:2\n0;1;a;3\n1;2;b;4\n")
-            config = SimpleNamespace(MODELS_PATH=models_path)
+            config = SimpleNamespace(MODELS_PATH=models_path, gamma=0.5, learning_rate=1)
             env = SimpleNamespace(
                 action_space=SimpleNamespace(n=2, sample=lambda: 1),
                 observation_space=SimpleNamespace(n=2),
@@ -120,7 +120,7 @@ class QTableTest(unittest.TestCase):
             q_table = QTableRM(config, env, "machine.txt")
 
             q_table.update(
-                0, 1, 0, 0, 1, 1, 0.5, 1, env,
+                0, 1, 0, 0, 1, 1, env,
                 lambda _, __, ___, ____: {"a"}, use_crm=True,
             )
 
@@ -131,7 +131,7 @@ class QTableTest(unittest.TestCase):
             Path(models_path, "machine.txt").write_text(
                 "i:0\nf:2\nr:-1\n0;1;a;3\n1;2;b;4\n"
             )
-            config = SimpleNamespace(MODELS_PATH=models_path)
+            config = SimpleNamespace(MODELS_PATH=models_path, gamma=0.5, learning_rate=1)
             env = SimpleNamespace(
                 action_space=SimpleNamespace(n=2, sample=lambda: 1),
                 observation_space=SimpleNamespace(n=2),
@@ -141,7 +141,7 @@ class QTableTest(unittest.TestCase):
                 with self.subTest(use_crm=use_crm):
                     q_table = QTableRM(config, env, "machine.txt")
                     q_table.update(
-                        0, 1, -10, 0, 0, 0, 0.5, 1, env,
+                        0, 1, -10, 0, 0, 0, env,
                         lambda *_: set(),
                         use_crm=use_crm,
                         invalid_action=True,

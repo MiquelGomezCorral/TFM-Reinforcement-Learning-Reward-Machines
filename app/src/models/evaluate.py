@@ -38,8 +38,6 @@ def evaluate_agent(
 
     total_rewards_ep = 0
 
-    state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
-
     completed = False
     for step in range(CONFIG.max_steps):
       # Evaluation is greedy: always take the action with max expected reward.
@@ -59,7 +57,7 @@ def evaluate_agent(
         break
 
       raw_state = new_raw_state
-      state = CONFIG.parse_state(env, new_state) if CONFIG.parse_state else new_state
+      state = new_state
       
     episode_rewards.append(total_rewards_ep)
     if completed:

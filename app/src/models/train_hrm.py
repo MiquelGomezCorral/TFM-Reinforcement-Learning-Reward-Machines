@@ -34,7 +34,6 @@ def train_hrm(
     progress_callback=None,
 ):
     seed_generator = seed_training(CONFIG.seed, env.action_space)
-    parse_state = getattr(CONFIG, "parse_state", None)
     total_steps = 0
 
     for episode in tqdm(range(CONFIG.n_training_episodes)):
@@ -42,7 +41,7 @@ def train_hrm(
         observation, info = env.reset(seed=next_episode_seed(seed_generator))
         raw_state = info.get("raw_state", observation)
         agent.reset_rm()
-        state = parse_state(env, observation) if parse_state else observation
+        state = observation
 
         option_start_high_state = None
         option_start_u = None
@@ -65,9 +64,7 @@ def train_hrm(
             action = agent.epsilon_greedy_policy(state, epsilon, env.action_space.sample)
             new_observation, env_reward, terminated, truncated, info = env.step(action)
             new_raw_state = info.get("raw_state", new_observation)
-            new_state = (
-                parse_state(env, new_observation) if parse_state else new_observation
-            )
+            new_state = new_observation
             events = get_propositions(env, raw_state, action, new_raw_state)
             next_u, reward, rm_done = agent.step_rm(events)
 

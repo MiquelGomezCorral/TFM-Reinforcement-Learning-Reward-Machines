@@ -22,8 +22,6 @@ def record_video(CONFIG: Configuration, qt, env, get_propositions: callable, vid
   images.append(img)
   if hasattr(qt, "reset_rm"):
     qt.reset_rm()
-  state = CONFIG.parse_state(env, state) if CONFIG.parse_state else state
-
   for _ in range(CONFIG.max_steps):
     # Video replay is greedy: always take the action with max expected reward.
     action = qt.greedy_policy(state)
@@ -40,7 +38,7 @@ def record_video(CONFIG: Configuration, qt, env, get_propositions: callable, vid
       break
 
     raw_state = new_raw_state
-    state = CONFIG.parse_state(env, new_state) if CONFIG.parse_state else new_state
+    state = new_state
   
   if video_name:
     path = os.path.join(CONFIG.VIDEO_PATH, video_name)

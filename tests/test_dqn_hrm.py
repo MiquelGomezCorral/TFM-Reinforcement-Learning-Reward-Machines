@@ -9,6 +9,7 @@ import torch
 
 from src.models.DQNHRM import DQNHRM
 from src.models.train_dqn_hrm import train_dqn_hrm
+from scripts.train_dqn_hrm import train_dqn_hrm_agent
 
 
 class ActionSpace:
@@ -58,6 +59,37 @@ def set_outputs(network, values):
 
 
 class DQNHRMTest(unittest.TestCase):
+    def test_train_dqn_hrm_agent_returns_post_training_metrics(self):
+        environment = SimpleNamespace(close=lambda: None)
+        agent = SimpleNamespace(print_size=lambda: None)
+        metrics = {
+            "successes": 1,
+            "episodes": 1,
+            "invalid_actions": 0,
+            "mean_reward": 1.0,
+            "reward_std": 0.0,
+            "successful_std": 0.0,
+            "mean_successful_steps": 1.0,
+            "worst_reward": 1.0,
+        }
+        config = SimpleNamespace(
+            seed=1,
+            rm_file="machine.txt",
+            multitaxi_grid_size=5,
+            exp_name="test",
+        )
+
+        with (
+            patch("scripts.train_dqn_hrm.create_environment", return_value=(environment, None)),
+            patch("scripts.train_dqn_hrm.DQNHRM", return_value=agent),
+            patch("scripts.train_dqn_hrm.train_dqn_hrm", return_value=agent),
+            patch("scripts.train_dqn_hrm.evaluate_agent", return_value=metrics) as evaluate,
+            patch("scripts.train_dqn_hrm.record_video"),
+        ):
+            self.assertEqual(train_dqn_hrm_agent(config), metrics)
+
+        self.assertTrue(evaluate.call_args.kwargs["return_metrics"])
+
     def test_masks_options_and_encodes_final_target(self):
         with tempfile.TemporaryDirectory() as models_path:
             Path(models_path, "machine.txt").write_text(
@@ -277,7 +309,7 @@ class DQNHRMTest(unittest.TestCase):
 
             agent.actor.optimize = optimize_actor
             agent.high_level.optimize = optimize_high
-            with patch("src.models.train_dqn_hrm.evaluate_agent", side_effect=evaluate):
+            with patch("src.models.train_dqn.evaluate_agent", side_effect=evaluate):
                 train_dqn_hrm(
                     config(
                         models_path,

@@ -11,15 +11,14 @@ from .DQNRM import DQNRM
 from .evaluate import evaluate_agent
 
 
-def _restore_best_checkpoint(CONFIG, agent, get_propositions, env, checkpoints):
+def restore_best_checkpoint(CONFIG, agent, get_propositions, env, checkpoints, dqns):
     if not checkpoints:
         return
 
-    dqn = agent.dqn if isinstance(agent, DQNRM) else agent
     if checkpoints[-1][0] != CONFIG.n_training_episodes:
         checkpoints.append((
             CONFIG.n_training_episodes,
-            copy.deepcopy(dqn.policy_net.state_dict()),
+            *(copy.deepcopy(dqn.policy_net.state_dict()) for dqn in dqns),
         ))
     rng = random.Random(CONFIG.dqn_validation_seed_base)
     validation_seeds = [
@@ -27,9 +26,10 @@ def _restore_best_checkpoint(CONFIG, agent, get_propositions, env, checkpoints):
     ]
     best_score = None
     best_episode = None
-    best_policy_state = None
-    for checkpoint_episode, policy_state in checkpoints:
-        dqn.policy_net.load_state_dict(policy_state)
+    best_states = None
+    for checkpoint_episode, *states in checkpoints:
+        for dqn, state in zip(dqns, states):
+            dqn.policy_net.load_state_dict(state)
         metrics = evaluate_agent(
             CONFIG,
             agent,
@@ -47,21 +47,14 @@ def _restore_best_checkpoint(CONFIG, agent, get_propositions, env, checkpoints):
         if best_score is None or score > best_score:
             best_score = score
             best_episode = checkpoint_episode
-            best_policy_state = policy_state
-    dqn.policy_net.load_state_dict(best_policy_state)
-    dqn.target_net.load_state_dict(best_policy_state)
+            best_states = states
+    for dqn, state in zip(dqns, best_states):
+        dqn.policy_net.load_state_dict(state)
+        dqn.target_net.load_state_dict(state)
     print(
         f" - Restored episode {best_episode} checkpoint: "
         f"validation_success={best_score[0]}/{CONFIG.dqn_validation_episodes}"
     )
-
-
-def _vector_final_observation(infos, index):
-    for key in ("final_obs", "final_observation"):
-        final_observations = infos.get(key)
-        if final_observations is not None:
-            return final_observations[index]
-    raise RuntimeError("Vector environment did not provide a final observation")
 
 
 def _train_vector_dqn(CONFIG, agent: DQN, get_propositions, env, evaluation_env, progress_callback):
@@ -80,11 +73,14 @@ def _train_vector_dqn(CONFIG, agent: DQN, get_propositions, env, evaluation_env,
         )
         actions = agent.epsilon_greedy_policies(states, epsilon, env.action_space.sample)
         new_states, rewards, terminated, truncated, infos = env.step(actions)
+        final_observations = infos.get("final_obs")
+        if np.any(terminated | truncated) and final_observations is None:
+            raise RuntimeError("Vector environment did not provide a final observation")
 
         for index in range(env.num_envs):
             done = terminated[index] or truncated[index]
             next_state = (
-                _vector_final_observation(infos, index)
+                final_observations[index]
                 if done else new_states[index]
             )
             agent.remember(
@@ -97,12 +93,12 @@ def _train_vector_dqn(CONFIG, agent: DQN, get_propositions, env, evaluation_env,
 
         previous_steps = steps
         steps += env.num_envs
-        if (
-            steps >= CONFIG.dqn_learning_starts
-            and steps // CONFIG.dqn_optimize_interval
-            > previous_steps // CONFIG.dqn_optimize_interval
-        ):
-            agent.optimize()
+        for step in range(previous_steps + 1, steps + 1):
+            if (
+                step >= CONFIG.dqn_learning_starts
+                and step % CONFIG.dqn_optimize_interval == 0
+            ):
+                agent.optimize()
 
         for _ in range(min(int(np.count_nonzero(terminated | truncated)), CONFIG.n_training_episodes - episodes)):
             episodes += 1
@@ -113,7 +109,9 @@ def _train_vector_dqn(CONFIG, agent: DQN, get_propositions, env, evaluation_env,
 
         states = new_states
 
-    _restore_best_checkpoint(CONFIG, agent, get_propositions, evaluation_env, checkpoints)
+    restore_best_checkpoint(
+        CONFIG, agent, get_propositions, evaluation_env, checkpoints, (agent,)
+    )
     return agent
 
 
@@ -209,6 +207,9 @@ def train_dqn(
         if progress_callback:
             progress_callback(episode + 1, agent, env, get_propositions)
 
-    _restore_best_checkpoint(CONFIG, agent, get_propositions, evaluation_env, checkpoints)
+    dqn = agent.dqn if isinstance(agent, DQNRM) else agent
+    restore_best_checkpoint(
+        CONFIG, agent, get_propositions, evaluation_env, checkpoints, (dqn,)
+    )
 
     return agent

@@ -23,7 +23,6 @@ class DQNRM:
             hidden_size=config.dqn_hidden_size,
             tau=config.dqn_tau,
             gradient_clip=config.dqn_gradient_clip,
-            rewarding_fraction=0.25,
         )
 
     def _states(self):

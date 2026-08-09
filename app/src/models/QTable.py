@@ -100,10 +100,11 @@ class QTableRM:
             rm_file: Reward Machine definition; omit it for ordinary Q-learning.
             dynamic: Store only visited environment states when True.
         """
-        print(f"The QTable is {'dynamic' if dynamic else 'static'}")
         self.rm = RewardMachine(CONFIG, rm_file) if rm_file else None
         self.state_space = None if dynamic else env.observation_space.n
         self.action_space = env.action_space.n
+        self.gamma = CONFIG.gamma
+        self.learning_rate = CONFIG.learning_rate
         rm_states = self.rm.states if self.rm else [0]
         self._q_tables = {u: self._new_q_table() for u in rm_states}
 
@@ -150,8 +151,8 @@ class QTableRM:
         )
 
     def update(
-        self, state, action, env_reward, raw_state, new_state, new_state_parse,
-        gamma, learning_rate, env, get_propositions, terminated=False, use_crm=False,
+        self, state, action, env_reward, raw_state, new_raw_state, new_state,
+        env, get_propositions, terminated=False, use_crm=False,
         invalid_action=False,
     ) -> bool:
         """
@@ -164,7 +165,7 @@ class QTableRM:
         rm_done = False
 
         if self.rm:
-            events = get_propositions(env, raw_state, action, new_state)
+            events = get_propositions(env, raw_state, action, new_raw_state)
 
             target_u, reward, rm_done = self.step_rm(events)
             if use_crm:
@@ -173,19 +174,20 @@ class QTableRM:
                     done = terminated or d_u
                     self._q_table(u).update(
                         state, action, env_reward if invalid_action else r_u,
-                        new_state_parse, done, gamma, learning_rate,
+                        new_state, done, self.gamma, self.learning_rate,
                         None if done else self._q_table(t_u),
                     )
             else:
                 done = terminated or rm_done
                 self._q_table(current_u).update(
                     state, action, env_reward if invalid_action else reward,
-                    new_state_parse, done, gamma, learning_rate,
+                    new_state, done, self.gamma, self.learning_rate,
                     None if done else self._q_table(target_u),
                 )
         else:
             self._q_table(current_u).update(
-                state, action, env_reward, new_state_parse, terminated, gamma, learning_rate
+                state, action, env_reward, new_state, terminated,
+                self.gamma, self.learning_rate,
             )
 
         return rm_done

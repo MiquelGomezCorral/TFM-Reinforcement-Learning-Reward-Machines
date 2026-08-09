@@ -26,11 +26,11 @@ class TwoStepEnvironment:
         return np.array([0, 1], dtype=np.float32), 1, self.steps == 2, False, {}
 
 
-class FourWorkerEnvironment:
-    num_envs = 4
+class EightWorkerEnvironment:
+    num_envs = 8
     action_space = SimpleNamespace(
         seed=lambda _: None,
-        sample=lambda: np.zeros(4, dtype=np.int64),
+        sample=lambda: np.zeros(8, dtype=np.int64),
     )
 
     def reset(self, seed=None):
@@ -62,7 +62,6 @@ def training_config(**overrides):
         "dqn_checkpoint_interval": 100,
         "dqn_validation_episodes": 10,
         "dqn_validation_seed_base": 7,
-        "parse_state": None,
         "use_crm": False,
     }
     values.update(overrides)
@@ -90,41 +89,17 @@ class DQNTest(unittest.TestCase):
         self.assertEqual(len(memory), 2)
         self.assertEqual({transition.state[0] for transition in memory._transitions}, {1, 2})
 
-    def test_replay_memory_stratifies_rewarding_transitions(self):
-        memory = ReplayMemory(20)
-        for index in range(10):
-            memory.push(np.array([index]), 0, -1, np.array([index + 1]))
-        memory.push(np.array([10]), 0, 5, np.array([11]))
-        memory.push(np.array([11]), 0, 20, None)
-
-        transitions = memory.sample(8)
-
-        self.assertGreaterEqual(sum(transition.reward > 0 for transition in transitions), 2)
-
-    def test_replay_memory_does_not_sample_evicted_rewarding_transitions(self):
-        memory = ReplayMemory(2)
-        memory.push(np.array([0]), 0, 1, np.array([1]))
-        memory.push(np.array([1]), 0, -1, np.array([2]))
-        memory.push(np.array([2]), 0, -1, np.array([3]))
-
-        transitions = memory.sample(2)
-
-        self.assertEqual({transition.state[0] for transition in transitions}, {1, 2})
-        self.assertEqual(memory._rewarding_slots, [])
-        self.assertEqual(memory._rewarding_indices, {})
-
-    def test_replay_memory_stratification_does_not_duplicate_transitions(self):
+    def test_replay_memory_samples_uniformly(self):
         memory = ReplayMemory(4)
         for index, reward in enumerate((1, -1, -1, -1)):
             memory.push(np.array([index]), 0, reward, np.array([index + 1]))
 
-        with (
-            patch("src.models.DQN.random.sample", return_value=[1, 2]),
-            patch("src.models.DQN.random.choice", return_value=0),
-        ):
+        expected = [memory._transitions[1], memory._transitions[2]]
+        with patch("src.models.DQN.random.sample", return_value=expected) as sample:
             transitions = memory.sample(2)
 
-        self.assertEqual({transition.state[0] for transition in transitions}, {0, 2})
+        sample.assert_called_once_with(memory._transitions, 2)
+        self.assertEqual(transitions, expected)
 
     def test_terminal_batch_optimizes_policy_network(self):
         torch.manual_seed(1)
@@ -176,7 +151,6 @@ class DQNTest(unittest.TestCase):
             self.assertFalse(done)
             self.assertEqual(len(agent.dqn.memory), len(agent._rm_states))
             self.assertEqual(agent.dqn.batch_size, 20)
-            self.assertEqual(agent.dqn.memory.rewarding_fraction, 0.25)
 
             agent.update(
                 np.array([0, 1]),
@@ -260,20 +234,62 @@ class DQNTest(unittest.TestCase):
 
         self.assertEqual(len(optimize_calls), 1)
 
-    def test_vector_training_collects_one_transition_per_worker_before_optimizing(self):
+    def test_vector_training_matches_scalar_update_cadence(self):
         config = training_config(
-            n_training_episodes=8,
-            dqn_num_envs=4,
-            dqn_optimize_interval=3,
+            n_training_episodes=16,
+            dqn_num_envs=8,
+            dqn_optimize_interval=4,
         )
-        agent = DQN(2, 2, 10, 10, 0.01, 0.9, 8, 0.005, 100)
+        agent = DQN(2, 2, 10, 16, 0.01, 0.9, 8, 0.005, 100)
         optimize_calls = []
         agent.optimize = lambda: optimize_calls.append(True)
 
-        train_dqn(config, agent, None, FourWorkerEnvironment())
+        train_dqn(config, agent, None, EightWorkerEnvironment())
 
-        self.assertEqual(len(agent.memory), 8)
-        self.assertEqual(optimize_calls, [True, True])
+        self.assertEqual(len(agent.memory), 16)
+        self.assertEqual(optimize_calls, [True, True, True, True])
+
+    def test_train_dqn_agent_returns_post_training_metrics(self):
+        environment = SimpleNamespace(
+            observation_space=SimpleNamespace(shape=(2,)),
+            action_space=SimpleNamespace(n=2),
+            close=lambda: None,
+        )
+        config = SimpleNamespace(
+            use_crm=False,
+            use_rm=False,
+            dqn_num_envs=1,
+            seed=1,
+            dqn_batch_size=2,
+            dqn_replay_capacity=10,
+            dqn_learning_rate=0.01,
+            gamma=0.9,
+            dqn_hidden_size=8,
+            dqn_tau=0.005,
+            dqn_gradient_clip=100,
+            multitaxi_grid_size=5,
+            exp_name="test",
+        )
+        metrics = {
+            "successes": 1,
+            "episodes": 1,
+            "invalid_actions": 0,
+            "mean_reward": 1.0,
+            "reward_std": 0.0,
+            "successful_std": 0.0,
+            "mean_successful_steps": 1.0,
+            "worst_reward": 1.0,
+        }
+
+        with (
+            patch("scripts.train_dqn.create_environment", return_value=(environment, None)),
+            patch("scripts.train_dqn.train_dqn"),
+            patch("scripts.train_dqn.evaluate_agent", return_value=metrics) as evaluate,
+            patch("scripts.train_dqn.record_video"),
+        ):
+            self.assertEqual(train_dqn_agent(config), metrics)
+
+        self.assertTrue(evaluate.call_args.kwargs["return_metrics"])
 
     def test_training_selects_best_validation_checkpoint(self):
         class Environment:
