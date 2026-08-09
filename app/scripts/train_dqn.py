@@ -3,16 +3,13 @@ from maikol_utils.print_utils import print_separator
 from src.config import Configuration
 from src.envs import create_environment, create_vector_environment
 from src.models import DQN, DQNRM, evaluate_agent, train_dqn
-from src.utils import record_video, seed_dqn
+from src.utils import record_video
 
 
 def train_dqn_agent(CONFIG: Configuration, progress_callback=None):
     if CONFIG.use_crm and not CONFIG.use_rm:
         raise ValueError("use_crm requires use_rm=True")
-    if CONFIG.dqn_num_envs > 1 and CONFIG.use_rm:
-        raise ValueError("Vectorized training currently supports plain DQN only")
 
-    seed_dqn(CONFIG.seed)
     evaluation_env, get_propositions = create_environment(
         CONFIG,
         one_hot_discrete=True,
@@ -47,8 +44,14 @@ def train_dqn_agent(CONFIG: Configuration, progress_callback=None):
         progress_callback,
         evaluation_env=evaluation_env,
     )
-    mean_reward, std_reward = evaluate_agent(CONFIG, agent, get_propositions, evaluation_env)
-    print(f" - Mean_reward={mean_reward:.2f} +/- {std_reward:.2f}")
+    metrics = evaluate_agent(
+        CONFIG,
+        agent,
+        get_propositions,
+        evaluation_env,
+        return_metrics=True,
+    )
+    print(f" - Mean_reward={metrics['mean_reward']:.2f} +/- {metrics['reward_std']:.2f}")
     grid = f"{CONFIG.multitaxi_grid_size}x{CONFIG.multitaxi_grid_size}"
     record_video(
         CONFIG,
@@ -60,4 +63,4 @@ def train_dqn_agent(CONFIG: Configuration, progress_callback=None):
     if env is not evaluation_env:
         env.close()
     evaluation_env.close()
-    return mean_reward, std_reward
+    return metrics

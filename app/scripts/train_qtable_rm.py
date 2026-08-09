@@ -1,6 +1,6 @@
 from maikol_utils.print_utils import print_separator
 
-from src.models import QTableRM, train_qtable_crm, evaluate_agent
+from src.models import QTableRM, evaluate_agent, train_qt as train_qt_model
 from src.utils import record_video
 from src.envs import create_environment
 from src.config import Configuration
@@ -30,7 +30,7 @@ def train_qt(CONFIG: Configuration, progress_callback=None):
     #                               TRAINING
     # ==================================================================
     print_separator("TRAINING", sep_type="SUPER")
-    qt = train_qtable_crm(CONFIG, qt, get_propositions, env, progress_callback)
+    qt = train_qt_model(CONFIG, qt, get_propositions, env, progress_callback)
 
     # ==================================================================
     #                               TESTING

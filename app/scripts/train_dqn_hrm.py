@@ -3,11 +3,10 @@ from maikol_utils.print_utils import print_separator
 from src.config import Configuration
 from src.envs import create_environment
 from src.models import DQNHRM, evaluate_agent, train_dqn_hrm
-from src.utils import record_video, seed_dqn
+from src.utils import record_video
 
 
-def train_dhrm_agent(CONFIG: Configuration, progress_callback=None):
-    seed_dqn(CONFIG.seed)
+def train_dqn_hrm_agent(CONFIG: Configuration, progress_callback=None):
     env, get_propositions = create_environment(
         CONFIG,
         one_hot_discrete=True,
@@ -17,8 +16,14 @@ def train_dhrm_agent(CONFIG: Configuration, progress_callback=None):
     agent = DQNHRM(CONFIG, env, CONFIG.rm_file)
     agent.print_size()
     agent = train_dqn_hrm(CONFIG, agent, get_propositions, env, progress_callback)
-    mean_reward, std_reward = evaluate_agent(CONFIG, agent, get_propositions, env)
-    print(f" - Mean_reward={mean_reward:.2f} +/- {std_reward:.2f}")
+    metrics = evaluate_agent(
+        CONFIG,
+        agent,
+        get_propositions,
+        env,
+        return_metrics=True,
+    )
+    print(f" - Mean_reward={metrics['mean_reward']:.2f} +/- {metrics['reward_std']:.2f}")
     record_video(
         CONFIG,
         agent,
@@ -27,3 +32,4 @@ def train_dhrm_agent(CONFIG: Configuration, progress_callback=None):
         video_name=f"{CONFIG.multitaxi_grid_size}x{CONFIG.multitaxi_grid_size}_{CONFIG.exp_name}_seed{CONFIG.seed}_video.gif",
     )
     env.close()
+    return metrics

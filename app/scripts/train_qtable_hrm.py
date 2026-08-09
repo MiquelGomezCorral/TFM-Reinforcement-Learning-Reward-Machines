@@ -6,7 +6,7 @@ from src.models import QTableHRM, evaluate_agent, train_hrm
 from src.utils import record_video
 
 
-def train_hrm_agent(CONFIG: Configuration, progress_callback=None):
+def train_qt_hrm_agent(CONFIG: Configuration, progress_callback=None):
     """Train tabular hierarchical RL with a Reward Machine."""
     # ==================================================================
     #                       ENVIRONMENT & Q TABLES
