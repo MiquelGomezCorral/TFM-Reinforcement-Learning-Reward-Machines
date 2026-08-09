@@ -1,5 +1,5 @@
-exp_name: "qrm_crm_multitaxi"
-exp_description: "Q-learning with Reward Machines and CRM on MultiTaxi"
+exp_name: "qt_crm_multitaxi"
+exp_description: "Q-table with Reward Machines and CRM on MultiTaxi"
 rm_file: "rm_taxi_2p.txt"
 seed: 42
 gym_id: "MultiTaxi-v0"

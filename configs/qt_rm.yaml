@@ -1,5 +1,5 @@
-exp_name: "qlearning_multitaxi"
-exp_description: "Q-learning on MultiTaxi"
+exp_name: "qt_rm_multitaxi"
+exp_description: "Q-table with Reward Machines on MultiTaxi"
 rm_file: "rm_taxi_2p.txt"
 seed: 42
 gym_id: "MultiTaxi-v0"
@@ -11,7 +11,7 @@ n_eval_episodes: 200
 eval_seed_base: 20260720
 max_steps: 100
 gamma: 0.99
-use_rm: false
+use_rm: true
 use_crm: false
 dynamic_qtable: true
 multitaxi_grid_size: 5
