@@ -62,15 +62,13 @@ def _train_vector_dqn(CONFIG, agent: DQN, get_propositions, env, evaluation_env,
     states, _ = env.reset(seed=[next_episode_seed(seed_generator) for _ in range(env.num_envs)])
     steps = 0
     episodes = 0
-    checkpoints = []
 
     while episodes < CONFIG.n_training_episodes:
         epsilons = compute_training_epsilon(
             CONFIG.min_epsilon,
             CONFIG.max_epsilon,
-            steps,
-            1 / CONFIG.dqn_epsilon_decay_steps,
             np.arange(steps, steps + env.num_envs),
+            1 / CONFIG.dqn_epsilon_decay_steps,
             CONFIG.dqn_learning_starts,
         )
         actions = agent.epsilon_greedy_policies(states, epsilons, env.action_space.sample)
@@ -103,16 +101,11 @@ def _train_vector_dqn(CONFIG, agent: DQN, get_propositions, env, evaluation_env,
 
         for _ in range(min(int(np.count_nonzero(terminated | truncated)), CONFIG.n_training_episodes - episodes)):
             episodes += 1
-            if episodes % CONFIG.dqn_checkpoint_interval == 0:
-                checkpoints.append((episodes, copy.deepcopy(agent.policy_net.state_dict())))
             if progress_callback:
                 progress_callback(episodes, agent, evaluation_env, get_propositions)
 
         states = new_states
 
-    restore_best_checkpoint(
-        CONFIG, agent, get_propositions, evaluation_env, checkpoints, (agent,)
-    )
     return agent
 
 
@@ -135,7 +128,7 @@ def train_dqn(
         raise ValueError("dqn_learning_starts cannot be negative")
     if CONFIG.dqn_optimize_starts < 0:
         raise ValueError("dqn_optimize_starts cannot be negative")
-    if CONFIG.dqn_checkpoint_interval <= 0:
+    if isinstance(agent, DQNRM) and CONFIG.dqn_checkpoint_interval <= 0:
         raise ValueError("dqn_checkpoint_interval must be positive")
     if CONFIG.dqn_num_envs <= 0:
         raise ValueError("dqn_num_envs must be positive")
@@ -171,7 +164,6 @@ def train_dqn(
                 CONFIG.max_epsilon,
                 steps,
                 1 / CONFIG.dqn_epsilon_decay_steps,
-                steps,
                 CONFIG.dqn_learning_starts,
             )
             action = agent.epsilon_greedy_policy(state, epsilon, env.action_space.sample)
@@ -207,15 +199,14 @@ def train_dqn(
             state = new_state
             raw_state = new_raw_state
 
-        if (episode + 1) % CONFIG.dqn_checkpoint_interval == 0:
-            dqn = agent.dqn if isinstance(agent, DQNRM) else agent
-            checkpoints.append((episode + 1, copy.deepcopy(dqn.policy_net.state_dict())))
+        if isinstance(agent, DQNRM) and (episode + 1) % CONFIG.dqn_checkpoint_interval == 0:
+            checkpoints.append((episode + 1, copy.deepcopy(agent.dqn.policy_net.state_dict())))
         if progress_callback:
             progress_callback(episode + 1, agent, env, get_propositions)
 
-    dqn = agent.dqn if isinstance(agent, DQNRM) else agent
-    restore_best_checkpoint(
-        CONFIG, agent, get_propositions, evaluation_env, checkpoints, (dqn,)
-    )
+    if isinstance(agent, DQNRM):
+        restore_best_checkpoint(
+            CONFIG, agent, get_propositions, evaluation_env, checkpoints, (agent.dqn,)
+        )
 
     return agent

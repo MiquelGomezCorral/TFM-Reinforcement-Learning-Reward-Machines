@@ -69,9 +69,6 @@ def training_config(**overrides):
         "dqn_learning_starts": 0,
         "dqn_optimize_starts": 0,
         "dqn_num_envs": 1,
-        "dqn_checkpoint_interval": 100,
-        "dqn_validation_episodes": 10,
-        "dqn_validation_seed_base": 7,
         "use_crm": False,
     }
     values.update(overrides)
@@ -314,7 +311,7 @@ class DQNTest(unittest.TestCase):
 
         self.assertTrue(evaluate.call_args.kwargs["return_metrics"])
 
-    def test_training_selects_best_validation_checkpoint(self):
+    def test_training_keeps_final_policy(self):
         class Environment:
             action_space = SimpleNamespace(seed=lambda _: None, sample=lambda: 0)
 
@@ -326,7 +323,7 @@ class DQNTest(unittest.TestCase):
                 return np.array([1, 0], dtype=np.float32), {}
 
             def step(self, action):
-                reward = 1 if action == 0 else 0
+                reward = 1 if action == 1 else 0
                 return np.array([0, 1], dtype=np.float32), reward, True, False, {}
 
         config = training_config(n_training_episodes=250, max_steps=1)
@@ -335,18 +332,44 @@ class DQNTest(unittest.TestCase):
         def update(*_args, **_kwargs):
             with torch.no_grad():
                 if environment.episodes > 200:
-                    agent.policy_net.layers[-1].bias.copy_(torch.tensor([1.0, 0.0]))
+                    agent.policy_net.layers[-1].bias.copy_(torch.tensor([0.0, 1.0]))
 
         agent.update = update
         with torch.no_grad():
             for parameter in agent.policy_net.parameters():
                 parameter.zero_()
-            agent.policy_net.layers[-1].bias.copy_(torch.tensor([0.0, 1.0]))
+            agent.policy_net.layers[-1].bias.copy_(torch.tensor([1.0, 0.0]))
         environment = Environment()
 
         train_dqn(config, agent, None, environment)
 
-        self.assertEqual(agent.greedy_policy(np.array([1, 0])), 0)
+        self.assertEqual(agent.greedy_policy(np.array([1, 0])), 1)
+
+    def test_reward_machine_training_restores_checkpoints(self):
+        with tempfile.TemporaryDirectory() as models_path:
+            Path(models_path, "machine.txt").write_text("i:0\nf:1\n0;1;a;1\n")
+            config = training_config(
+                dqn_checkpoint_interval=1,
+                dqn_validation_episodes=1,
+                dqn_validation_seed_base=7,
+            )
+            config.MODELS_PATH = models_path
+            config.dqn_batch_size = 2
+            config.dqn_replay_capacity = 10
+            config.dqn_learning_rate = 0.01
+            config.gamma = 0.9
+            config.dqn_hidden_size = 8
+            config.dqn_tau = 0.005
+            config.dqn_gradient_clip = 100
+            environment = TwoStepEnvironment()
+            environment.observation_space = SimpleNamespace(shape=(2,))
+            environment.action_space.n = 2
+            agent = DQNRM(config, environment, "machine.txt")
+
+            with patch("src.models.train_dqn.restore_best_checkpoint") as restore:
+                train_dqn(config, agent, lambda *_: set(), environment)
+
+        restore.assert_called_once()
 
 if __name__ == "__main__":
     unittest.main()
