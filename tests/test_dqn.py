@@ -48,6 +48,15 @@ class EightWorkerEnvironment:
         )
 
 
+class ActionRecordingEnvironment(TwoStepEnvironment):
+    def __init__(self):
+        self.actions = []
+
+    def step(self, action):
+        self.actions.append(action)
+        return super().step(action)
+
+
 def training_config(**overrides):
     values = {
         "seed": 1,
@@ -58,6 +67,7 @@ def training_config(**overrides):
         "dqn_epsilon_decay_steps": 10,
         "dqn_optimize_interval": 1,
         "dqn_learning_starts": 0,
+        "dqn_optimize_starts": 0,
         "dqn_num_envs": 1,
         "dqn_checkpoint_interval": 100,
         "dqn_validation_episodes": 10,
@@ -224,8 +234,8 @@ class DQNTest(unittest.TestCase):
 
         self.assertEqual(len(agent.memory), 4)
 
-    def test_training_honors_learning_warmup_and_optimize_interval(self):
-        config = training_config(dqn_optimize_interval=2, dqn_learning_starts=3)
+    def test_training_honors_optimize_starts_and_optimize_interval(self):
+        config = training_config(dqn_optimize_interval=2, dqn_optimize_starts=3)
         agent = DQN(2, 2, 10, 10, 0.01, 0.9, 8, 0.005, 100)
         optimize_calls = []
         agent.optimize = lambda: optimize_calls.append(True)
@@ -233,6 +243,19 @@ class DQNTest(unittest.TestCase):
         train_dqn(config, agent, None, TwoStepEnvironment())
 
         self.assertEqual(len(optimize_calls), 1)
+
+    def test_training_uses_random_actions_during_learning_starts(self):
+        config = training_config(dqn_learning_starts=2)
+        agent = DQN(2, 2, 10, 10, 0.01, 0.9, 8, 0.005, 100)
+        with torch.no_grad():
+            for parameter in agent.policy_net.parameters():
+                parameter.zero_()
+            agent.policy_net.layers[-1].bias[1] = 1
+        env = ActionRecordingEnvironment()
+
+        train_dqn(config, agent, None, env)
+
+        self.assertEqual(env.actions, [0, 0, 1, 1])
 
     def test_vector_training_matches_scalar_update_cadence(self):
         config = training_config(

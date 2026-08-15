@@ -34,6 +34,7 @@ def config(models_path, **overrides):
         "dqn_epsilon_decay_steps": 10,
         "dqn_optimize_interval": 1,
         "dqn_learning_starts": 0,
+        "dqn_optimize_starts": 0,
         "dqn_checkpoint_interval": 100,
         "dqn_validation_episodes": 1,
         "dqn_validation_seed_base": 7,

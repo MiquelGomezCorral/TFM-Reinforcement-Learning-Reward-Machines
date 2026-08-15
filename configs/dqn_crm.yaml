@@ -15,20 +15,21 @@ use_crm: true
 multitaxi_grid_size: 5
 multitaxi_num_passengers: 2
 multitaxi_observation_mode: "relative"
-dqn_num_envs: 1
+dqn_num_envs: 16
 
 max_epsilon: 1.0
 min_epsilon: 0.05
-dqn_epsilon_decay_steps: 250000
 
 dqn_batch_size: 128
 dqn_replay_capacity: 100000
-dqn_learning_rate: 0.005
+dqn_learning_rate: 0.001
 dqn_hidden_size: 128
-dqn_tau: 0.005
-dqn_gradient_clip: 100
+dqn_tau: 0.01
+dqn_gradient_clip: 10
+dqn_epsilon_decay_steps: 50000
 dqn_optimize_interval: 4
 dqn_learning_starts: 2000
+dqn_optimize_starts: 2000
 dqn_checkpoint_interval: 5000
 dqn_validation_episodes: 1000
 dqn_validation_seed_base: 20260719

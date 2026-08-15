@@ -14,6 +14,7 @@ from src.envs import (
 from src.config import Configuration
 from src.models.QTable import QTable, QTableRM
 from src.models.RewardMachine import RewardMachine
+from src.models.train import train_qt
 
 
 class QTableTest(unittest.TestCase):
@@ -183,6 +184,42 @@ class QTableTest(unittest.TestCase):
             machine.step({"a"})
 
             self.assertEqual(machine.get_current_state(), 1)
+
+    def test_training_uses_random_actions_during_learning_starts(self):
+        class Environment:
+            action_space = SimpleNamespace(seed=lambda _: None, sample=lambda: 0)
+
+            def __init__(self):
+                self.actions = []
+
+            def reset(self, seed=None):
+                self.steps = 0
+                return 0, {}
+
+            def step(self, action):
+                self.actions.append(action)
+                self.steps += 1
+                return 0, 0, self.steps == 2, False, {}
+
+        config = SimpleNamespace(
+            seed=1,
+            n_training_episodes=2,
+            max_steps=2,
+            min_epsilon=0,
+            max_epsilon=0,
+            decay_rate=0,
+            qtable_learning_starts=2,
+            gamma=0.9,
+            learning_rate=0.1,
+            use_crm=False,
+        )
+        env = Environment()
+        q_table = QTableRM(config, env)
+        q_table._q_table(0).values(0)[1] = 1
+
+        train_qt(config, q_table, None, env)
+
+        self.assertEqual(env.actions, [0, 0, 1, 1])
 
 
 if __name__ == "__main__":

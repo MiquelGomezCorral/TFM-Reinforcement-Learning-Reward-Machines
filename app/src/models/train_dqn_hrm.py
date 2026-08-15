@@ -14,6 +14,8 @@ def train_dqn_hrm(CONFIG: Configuration, agent: DQNHRM, get_propositions, env, p
         raise ValueError("dqn_optimize_interval must be positive")
     if CONFIG.dqn_learning_starts < 0:
         raise ValueError("dqn_learning_starts cannot be negative")
+    if CONFIG.dqn_optimize_starts < 0:
+        raise ValueError("dqn_optimize_starts cannot be negative")
     if CONFIG.dqn_checkpoint_interval <= 0:
         raise ValueError("dqn_checkpoint_interval must be positive")
 

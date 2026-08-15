@@ -30,6 +30,7 @@ def config(models_path, **overrides):
         "min_epsilon": 0,
         "max_epsilon": 0,
         "decay_rate": 0,
+        "qtable_learning_starts": 0,
         "gamma": 0.5,
         "learning_rate": 1,
         "hrm_r_plus": 1,

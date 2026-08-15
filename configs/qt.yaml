@@ -21,3 +21,4 @@ multitaxi_observation_mode: "discrete"
 max_epsilon: 1.0
 min_epsilon: 0.05
 decay_rate: 0.00025
+qtable_learning_starts: 1000

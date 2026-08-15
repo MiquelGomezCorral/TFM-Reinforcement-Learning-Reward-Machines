@@ -108,7 +108,8 @@ class DQN:
 
     def epsilon_greedy_policies(self, states, epsilon, sample_actions=None):
         states = np.asarray(states, dtype=np.float32)
-        explore = np.array([random.random() <= epsilon for _ in states])
+        epsilons = np.broadcast_to(epsilon, len(states))
+        explore = np.array([random.random() <= value for value in epsilons])
         actions = np.empty(len(states), dtype=np.int64)
 
         if np.any(~explore):

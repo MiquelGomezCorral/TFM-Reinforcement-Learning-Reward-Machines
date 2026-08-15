@@ -1,4 +1,4 @@
-from src.utils import compute_epsilon
+from src.utils import compute_training_epsilon
 
 from .RewardMachine import RewardMachine
 
@@ -50,11 +50,13 @@ class HRM:
         return next_u, reward, done
 
     def training_epsilon(self, episode, _total_steps):
-        return compute_epsilon(
+        return compute_training_epsilon(
             self.config.min_epsilon,
             self.config.max_epsilon,
             episode,
             self.config.decay_rate,
+            _total_steps,
+            self.config.qtable_learning_starts,
         )
 
     def optimize_training_step(self, _total_steps):

@@ -59,6 +59,7 @@ class Configuration:
     max_epsilon: float = 1.0    # Exploration probability at start
     min_epsilon: float = 0.05   # Minimum exploration probability
     decay_rate: float = 0.0005  # Exponential decay rate for exploration prob
+    qtable_learning_starts: int = 1000
 
     # HRM parameters
     hrm_r_plus: float = 1
@@ -67,14 +68,15 @@ class Configuration:
 
     # DQN parameters
     dqn_batch_size: int = 128
-    dqn_replay_capacity: int = 10000
+    dqn_replay_capacity: int = 100000
     dqn_learning_rate: float = 1e-3
     dqn_hidden_size: int = 128
-    dqn_tau: float = 0.005
-    dqn_gradient_clip: float = 100
-    dqn_epsilon_decay_steps: int = 2500
+    dqn_tau: float = 0.01
+    dqn_gradient_clip: float = 10
+    dqn_epsilon_decay_steps: int = 50000
     dqn_optimize_interval: int = 4
-    dqn_learning_starts: int = 0
+    dqn_learning_starts: int = 1000
+    dqn_optimize_starts: int = 1000
     dqn_num_envs: int = 1
     dqn_checkpoint_interval: int = 5000
     dqn_validation_episodes: int = 200

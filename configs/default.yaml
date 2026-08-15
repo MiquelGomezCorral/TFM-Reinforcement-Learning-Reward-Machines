@@ -26,6 +26,7 @@ multitaxi_observation_mode: "discrete"
 max_epsilon: 1.0  # Exploration probability at start
 min_epsilon: 0.05  # Minimum exploration probability
 decay_rate: 0.0005  # Exponential decay rate for exploration prob
+qtable_learning_starts: 1000
 
 # HRM parameters
 hrm_r_plus: 1
@@ -34,10 +35,12 @@ hrm_q_init: 0  # Use 2 for the paper's optimistic initialization
 
 # DQN parameters
 dqn_batch_size: 128
-dqn_replay_capacity: 10000
+dqn_replay_capacity: 100000
 dqn_learning_rate: 0.001
 dqn_hidden_size: 128
-dqn_tau: 0.005
-dqn_gradient_clip: 100
-dqn_epsilon_decay_steps: 2500
+dqn_tau: 0.01
+dqn_gradient_clip: 10
+dqn_epsilon_decay_steps: 50000
 dqn_optimize_interval: 4
+dqn_learning_starts: 1000
+dqn_optimize_starts: 1000

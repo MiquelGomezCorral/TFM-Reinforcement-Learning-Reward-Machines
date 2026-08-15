@@ -2,18 +2,18 @@ from typing import Callable
 from tqdm import tqdm
 
 from src.config import Configuration
-from src.utils import compute_epsilon, next_episode_seed, seed_training
+from src.utils import compute_training_epsilon, next_episode_seed, seed_training
 from .QTable import QTableRM
 
 
 def train_qt(CONFIG: Configuration, qt: QTableRM, get_propositions: Callable, env, progress_callback=None):
+  if CONFIG.qtable_learning_starts < 0:
+    raise ValueError("qtable_learning_starts cannot be negative")
+
   seed_generator = seed_training(CONFIG.seed, env.action_space)
+  total_steps = 0
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
-    epsilon = compute_epsilon(
-      CONFIG.min_epsilon, CONFIG.max_epsilon, episode, CONFIG.decay_rate
-    )
-
     seed = next_episode_seed(seed_generator)
     observation, info = env.reset(seed=seed)
     raw_state = info.get("raw_state", observation)
@@ -21,7 +21,15 @@ def train_qt(CONFIG: Configuration, qt: QTableRM, get_propositions: Callable, en
     state = observation
 
     for _ in range(CONFIG.max_steps):
-      action = qt.epsilon_greedy_policy(state, epsilon, env)
+      action_epsilon = compute_training_epsilon(
+        CONFIG.min_epsilon,
+        CONFIG.max_epsilon,
+        episode,
+        CONFIG.decay_rate,
+        total_steps,
+        CONFIG.qtable_learning_starts,
+      )
+      action = qt.epsilon_greedy_policy(state, action_epsilon, env)
 
       new_state, env_reward, terminated, truncated, info = env.step(action)
       new_raw_state = info.get("raw_state", new_state)
@@ -32,8 +40,9 @@ def train_qt(CONFIG: Configuration, qt: QTableRM, get_propositions: Callable, en
           get_propositions,
           terminated=terminated,
           use_crm=CONFIG.use_crm,
-          invalid_action=info.get("invalid_action", False),
+        invalid_action=info.get("invalid_action", False),
       )
+      total_steps += 1
 
       if terminated or truncated or rm_done:
         break

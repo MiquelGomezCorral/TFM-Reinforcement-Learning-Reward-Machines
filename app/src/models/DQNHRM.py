@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from src.utils import compute_epsilon
+from src.utils import compute_training_epsilon, should_optimize
 
 from .DQN import DQN
 from .HRM import HRM, option_reward
@@ -112,11 +112,13 @@ class DQNHRM(HRM):
         )
 
     def training_epsilon(self, _episode, total_steps):
-        return compute_epsilon(
+        return compute_training_epsilon(
             self.config.min_epsilon,
             self.config.max_epsilon,
             total_steps,
             1 / self.config.dqn_epsilon_decay_steps,
+            total_steps,
+            self.config.dqn_learning_starts,
         )
 
     def counterfactual_update(
@@ -165,9 +167,10 @@ class DQNHRM(HRM):
         self.high_level.update(state, action, target, None, True, optimize=False)
 
     def optimize_training_step(self, total_steps):
-        if (
-            total_steps >= self.config.dqn_learning_starts
-            and total_steps % self.config.dqn_optimize_interval == 0
+        if should_optimize(
+            total_steps,
+            self.config.dqn_optimize_starts,
+            self.config.dqn_optimize_interval,
         ):
             self.actor.optimize()
             self.high_level.optimize()

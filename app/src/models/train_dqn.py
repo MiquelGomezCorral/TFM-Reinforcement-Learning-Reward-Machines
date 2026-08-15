@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 
 from src.config import Configuration
-from src.utils import compute_epsilon, next_episode_seed, seed_dqn, seed_training
+from src.utils import compute_training_epsilon, next_episode_seed, seed_dqn, seed_training, should_optimize
 from .DQN import DQN
 from .DQNRM import DQNRM
 from .evaluate import evaluate_agent
@@ -65,13 +65,15 @@ def _train_vector_dqn(CONFIG, agent: DQN, get_propositions, env, evaluation_env,
     checkpoints = []
 
     while episodes < CONFIG.n_training_episodes:
-        epsilon = compute_epsilon(
+        epsilons = compute_training_epsilon(
             CONFIG.min_epsilon,
             CONFIG.max_epsilon,
             steps,
             1 / CONFIG.dqn_epsilon_decay_steps,
+            np.arange(steps, steps + env.num_envs),
+            CONFIG.dqn_learning_starts,
         )
-        actions = agent.epsilon_greedy_policies(states, epsilon, env.action_space.sample)
+        actions = agent.epsilon_greedy_policies(states, epsilons, env.action_space.sample)
         new_states, rewards, terminated, truncated, infos = env.step(actions)
         final_observations = infos.get("final_obs")
         if np.any(terminated | truncated) and final_observations is None:
@@ -94,9 +96,8 @@ def _train_vector_dqn(CONFIG, agent: DQN, get_propositions, env, evaluation_env,
         previous_steps = steps
         steps += env.num_envs
         for step in range(previous_steps + 1, steps + 1):
-            if (
-                step >= CONFIG.dqn_learning_starts
-                and step % CONFIG.dqn_optimize_interval == 0
+            if should_optimize(
+                step, CONFIG.dqn_optimize_starts, CONFIG.dqn_optimize_interval
             ):
                 agent.optimize()
 
@@ -132,6 +133,8 @@ def train_dqn(
         raise ValueError("dqn_optimize_interval must be positive")
     if CONFIG.dqn_learning_starts < 0:
         raise ValueError("dqn_learning_starts cannot be negative")
+    if CONFIG.dqn_optimize_starts < 0:
+        raise ValueError("dqn_optimize_starts cannot be negative")
     if CONFIG.dqn_checkpoint_interval <= 0:
         raise ValueError("dqn_checkpoint_interval must be positive")
     if CONFIG.dqn_num_envs <= 0:
@@ -163,18 +166,21 @@ def train_dqn(
             agent.reset_rm()
 
         for _ in range(CONFIG.max_steps):
-            epsilon = compute_epsilon(
+            epsilon = compute_training_epsilon(
                 CONFIG.min_epsilon,
                 CONFIG.max_epsilon,
                 steps,
                 1 / CONFIG.dqn_epsilon_decay_steps,
+                steps,
+                CONFIG.dqn_learning_starts,
             )
             action = agent.epsilon_greedy_policy(state, epsilon, env.action_space.sample)
             new_state, env_reward, terminated, truncated, info = env.step(action)
             new_raw_state = info.get("raw_state", new_state)
-            optimize = (
-                steps + 1 >= CONFIG.dqn_learning_starts
-                and (steps + 1) % optimize_interval == 0
+            optimize = should_optimize(
+                steps + 1,
+                CONFIG.dqn_optimize_starts,
+                optimize_interval,
             )
 
             if isinstance(agent, DQNRM):
