@@ -55,7 +55,6 @@ class HRM:
             self.config.max_epsilon,
             episode,
             self.config.decay_rate,
-            _total_steps,
             self.config.qtable_learning_starts,
         )
 

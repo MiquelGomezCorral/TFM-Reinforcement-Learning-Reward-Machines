@@ -11,7 +11,6 @@ def train_qt(CONFIG: Configuration, qt: QTableRM, get_propositions: Callable, en
     raise ValueError("qtable_learning_starts cannot be negative")
 
   seed_generator = seed_training(CONFIG.seed, env.action_space)
-  total_steps = 0
   
   for episode in tqdm(range(CONFIG.n_training_episodes)):
     seed = next_episode_seed(seed_generator)
@@ -26,7 +25,6 @@ def train_qt(CONFIG: Configuration, qt: QTableRM, get_propositions: Callable, en
         CONFIG.max_epsilon,
         episode,
         CONFIG.decay_rate,
-        total_steps,
         CONFIG.qtable_learning_starts,
       )
       action = qt.epsilon_greedy_policy(state, action_epsilon, env)
@@ -42,8 +40,6 @@ def train_qt(CONFIG: Configuration, qt: QTableRM, get_propositions: Callable, en
           use_crm=CONFIG.use_crm,
         invalid_action=info.get("invalid_action", False),
       )
-      total_steps += 1
-
       if terminated or truncated or rm_done:
         break
 

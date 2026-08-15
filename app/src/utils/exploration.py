@@ -8,15 +8,16 @@ def compute_epsilon(min_epsilon, max_epsilon, step, decay_rate):
 def compute_training_epsilon(
     min_epsilon,
     max_epsilon,
-    decay_step,
+    step,
     decay_rate,
-    warmup_step,
     learning_starts,
 ):
-    epsilon = compute_epsilon(min_epsilon, max_epsilon, decay_step, decay_rate)
-    if np.isscalar(warmup_step):
-        return 1.0 if warmup_step < learning_starts else epsilon
-    return np.where(np.asarray(warmup_step) < learning_starts, 1.0, epsilon)
+    """Keep exploration random during warm-up, then decay it exponentially."""
+    steps = np.asarray(step)
+    decay_steps = np.maximum(steps - learning_starts, 0)
+    epsilon = compute_epsilon(min_epsilon, max_epsilon, decay_steps, decay_rate)
+    epsilon = np.where(steps < learning_starts, 1.0, epsilon)
+    return epsilon.item() if epsilon.ndim == 0 else epsilon
 
 
 def should_optimize(total_steps, optimize_starts, optimize_interval):

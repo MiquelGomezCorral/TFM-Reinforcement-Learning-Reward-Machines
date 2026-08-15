@@ -117,7 +117,6 @@ class DQNHRM(HRM):
             self.config.max_epsilon,
             total_steps,
             1 / self.config.dqn_epsilon_decay_steps,
-            total_steps,
             self.config.dqn_learning_starts,
         )
 
