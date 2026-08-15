@@ -17,8 +17,9 @@ dynamic_qtable: true
 multitaxi_grid_size: 5
 multitaxi_num_passengers: 2
 multitaxi_observation_mode: "discrete"
+multitaxi_reward_shaping: true
 
 max_epsilon: 1.0
 min_epsilon: 0.05
 decay_rate: 0.00025
-qtable_learning_starts: 1000
+qtable_learning_starts: 1000  # Random warm-up episodes before epsilon decay

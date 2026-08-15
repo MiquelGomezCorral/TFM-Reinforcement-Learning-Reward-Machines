@@ -14,6 +14,7 @@ class MultiTaxiEnv(gym.Env):
         observation_mode="discrete",
         render_mode=None,
         reward_shaping=True,
+        distance_shaping=False,
         non_terminal_reward=-1,
     ):
         self.grid_size = grid_size
@@ -21,6 +22,7 @@ class MultiTaxiEnv(gym.Env):
         self.observation_mode = observation_mode
         self.render_mode = render_mode
         self.reward_shaping = reward_shaping
+        self.distance_shaping = distance_shaping
         self.non_terminal_reward = non_terminal_reward
 
         if grid_size == 5:
@@ -35,10 +37,10 @@ class MultiTaxiEnv(gym.Env):
             # The observation space is a single integer representing the state.
             self.observation_space = spaces.Discrete(int(np.prod(self.state_bounds)))
         elif observation_mode == "relative":
-            # The observation space is a continuous vector representing the relative positions of the taxi and passengers.
+            # Relative passenger and destination features avoid exposing a grid map.
             self.observation_space = spaces.Box(
-                low=-(grid_size - 1),
-                high=grid_size - 1,
+                low=-1.0,
+                high=1.0,
                 shape=(7 * num_passengers,),
                 dtype=np.float32,
             )
@@ -79,6 +81,7 @@ class MultiTaxiEnv(gym.Env):
         return self._observation(), {"raw_state": raw_state}
 
     def step(self, action):
+        previous_distance = self._delivery_distance() if self.distance_shaping else 0
         taxi_r, taxi_c = self.state[0], self.state[1]
         passengers = self.state[2:]
         reward = -1
@@ -124,6 +127,8 @@ class MultiTaxiEnv(gym.Env):
 
         self.state = [taxi_r, taxi_c] + passengers
         terminated = all(passengers[i*2] == passengers[i*2+1] for i in range(self.num_passengers))
+        if self.distance_shaping:
+            reward += previous_distance - self._delivery_distance()
         if not self.reward_shaping:
             reward = 50 if terminated else self.non_terminal_reward
         
@@ -132,6 +137,22 @@ class MultiTaxiEnv(gym.Env):
             "raw_state": raw_state,
             "invalid_action": invalid_action,
         }
+
+    def _delivery_distance(self):
+        taxi_r, taxi_c = self.state[:2]
+        distance = 0
+        for index in range(self.num_passengers):
+            location, destination = self.state[2 + index * 2:4 + index * 2]
+            destination_r, destination_c = self.locs[destination]
+            if location == destination:
+                continue
+            if location == 4:
+                passenger_r, passenger_c = taxi_r, taxi_c
+            else:
+                passenger_r, passenger_c = self.locs[location]
+                distance += abs(taxi_r - passenger_r) + abs(taxi_c - passenger_c)
+            distance += abs(passenger_r - destination_r) + abs(passenger_c - destination_c)
+        return distance
 
     def _observation(self):
         if self.observation_mode == "discrete":
@@ -145,6 +166,7 @@ class MultiTaxiEnv(gym.Env):
             return np.asarray(observation, dtype=np.float32)
 
         taxi_r, taxi_c = self.state[:2]
+        scale = self.grid_size - 1
         observation = []
         for i in range(self.num_passengers):
             passenger_location, destination = self.state[2 + i * 2:4 + i * 2]
@@ -161,10 +183,10 @@ class MultiTaxiEnv(gym.Env):
                 status = (1.0, 0.0, 0.0)
 
             observation.extend([
-                passenger_r - taxi_r,
-                passenger_c - taxi_c,
-                destination_r - taxi_r,
-                destination_c - taxi_c,
+                (passenger_r - taxi_r) / scale,
+                (passenger_c - taxi_c) / scale,
+                (destination_r - taxi_r) / scale,
+                (destination_c - taxi_c) / scale,
                 *status,
             ])
 

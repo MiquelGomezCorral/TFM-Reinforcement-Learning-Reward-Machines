@@ -15,13 +15,14 @@ use_crm: true
 multitaxi_grid_size: 5
 multitaxi_num_passengers: 2
 multitaxi_observation_mode: "relative"
+multitaxi_reward_shaping: true
 dqn_num_envs: 16
 
 max_epsilon: 1.0
 min_epsilon: 0.05
 
 dqn_batch_size: 128
-dqn_replay_capacity: 100000
+dqn_replay_capacity: 50000
 dqn_learning_rate: 0.001
 dqn_hidden_size: 128
 dqn_tau: 0.01

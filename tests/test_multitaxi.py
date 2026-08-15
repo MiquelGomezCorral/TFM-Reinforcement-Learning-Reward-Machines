@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from src.envs import create_environment
+from src.envs import create_environment, get_propositions_multi_taxi
 from src.envs.taxi_big_env import MultiTaxiEnv
 
 
@@ -16,9 +16,9 @@ class MultiTaxiTest(unittest.TestCase):
 
         self.assertEqual(observation.shape, (14,))
         self.assertTrue(env.observation_space.contains(observation))
-        np.testing.assert_array_equal(observation[:4], np.array([-2, 3, 2, -1]))
+        np.testing.assert_array_equal(observation[:4], np.array([-0.5, 0.75, 0.5, -0.25]))
         np.testing.assert_array_equal(observation[4:7], np.array([1, 0, 0]))
-        np.testing.assert_array_equal(observation[7:11], np.array([0, 0, 2, 2]))
+        np.testing.assert_array_equal(observation[7:11], np.array([0, 0, 0.5, 0.5]))
         np.testing.assert_array_equal(observation[11:14], np.array([0, 1, 0]))
     def test_relative_reset_preserves_discrete_raw_state(self):
         env = MultiTaxiEnv(num_passengers=3, observation_mode="relative")
@@ -27,6 +27,36 @@ class MultiTaxiTest(unittest.TestCase):
 
         self.assertEqual(observation.shape, (21,))
         self.assertEqual(info["raw_state"], env.encode(env.state))
+
+    def test_relative_observation_is_normalized_on_10x10_grid(self):
+        env = MultiTaxiEnv(grid_size=10, num_passengers=2, observation_mode="relative")
+        env.state = [9, 9, 0, 1, 4, 2]
+
+        observation = env._observation()
+
+        self.assertTrue(env.observation_space.contains(observation))
+        np.testing.assert_array_equal(observation[:4], np.array([-1, -1, -1, 0]))
+        np.testing.assert_array_equal(observation[7:11], np.array([0, 0, 0, -1]))
+
+    def test_distance_shaping_rewards_progress_and_preserves_events(self):
+        env = MultiTaxiEnv(num_passengers=1, distance_shaping=True)
+        env.state = [0, 1, 0, 1]
+
+        _, reward, _, _, _ = env.step(3)
+        self.assertEqual(reward, 0)
+
+        env.state = [0, 1, 0, 1]
+        _, reward, _, _, _ = env.step(2)
+        self.assertEqual(reward, -2)
+
+        env.state = [0, 0, 0, 1]
+        _, reward, _, _, _ = env.step(4)
+        self.assertEqual(reward, 5)
+
+        env.state = [0, 4, 4, 1]
+        _, reward, terminated, _, _ = env.step(5)
+        self.assertEqual(reward, 20)
+        self.assertTrue(terminated)
 
     def test_factored_observation_one_hot_encodes_full_state(self):
         env = MultiTaxiEnv(num_passengers=2, observation_mode="factored")
@@ -47,6 +77,7 @@ class MultiTaxiTest(unittest.TestCase):
                 multitaxi_num_passengers=2,
                 multitaxi_observation_mode="relative",
                 multitaxi_reward_shaping=False,
+                multitaxi_distance_shaping=True,
                 multitaxi_non_terminal_reward=-2,
             )
         )
@@ -58,7 +89,42 @@ class MultiTaxiTest(unittest.TestCase):
         self.assertEqual(state.shape, new_state.shape)
         self.assertIsInstance(propositions, list)
         self.assertFalse(env.reward_shaping)
+        self.assertTrue(env.distance_shaping)
         self.assertEqual(env.non_terminal_reward, -2)
+
+    def test_multitaxi_propositions_are_transition_events(self):
+        env = MultiTaxiEnv(num_passengers=2)
+
+        env.state = [0, 0, 0, 1, 2, 3]
+        state = env.encode(env.state)
+        _, _, _, _, info = env.step(4)
+        self.assertEqual(get_propositions_multi_taxi(env, state, 4, info["raw_state"]), ["p1"])
+
+        state = info["raw_state"]
+        _, _, _, _, info = env.step(2)
+        self.assertEqual(get_propositions_multi_taxi(env, state, 2, info["raw_state"]), [])
+
+        env.state = [0, 4, 4, 1, 2, 3]
+        state = env.encode(env.state)
+        _, _, _, _, info = env.step(5)
+        self.assertEqual(get_propositions_multi_taxi(env, state, 5, info["raw_state"]), ["d1"])
+
+        state = info["raw_state"]
+        _, _, _, _, info = env.step(0)
+        self.assertEqual(get_propositions_multi_taxi(env, state, 0, info["raw_state"]), [])
+
+    def test_multitaxi_propositions_include_simultaneous_events(self):
+        env = MultiTaxiEnv(num_passengers=2)
+
+        env.state = [0, 0, 0, 1, 0, 2]
+        state = env.encode(env.state)
+        _, _, _, _, info = env.step(4)
+        self.assertEqual(get_propositions_multi_taxi(env, state, 4, info["raw_state"]), ["p1", "p2"])
+
+        env.state = [0, 4, 4, 1, 4, 1]
+        state = env.encode(env.state)
+        _, _, _, _, info = env.step(5)
+        self.assertEqual(get_propositions_multi_taxi(env, state, 5, info["raw_state"]), ["d1", "d2"])
 
     def test_progress_rewards_scale_with_passengers(self):
         env = MultiTaxiEnv(num_passengers=2, observation_mode="relative")
@@ -73,7 +139,7 @@ class MultiTaxiTest(unittest.TestCase):
         self.assertTrue(terminated)
 
     def test_sparse_rewards_only_on_completion(self):
-        env = MultiTaxiEnv(num_passengers=2, reward_shaping=False)
+        env = MultiTaxiEnv(num_passengers=2, reward_shaping=False, distance_shaping=True)
         env.state = [0, 0, 0, 1, 0, 1]
 
         _, invalid_reward, terminated, _, _ = env.step(1)

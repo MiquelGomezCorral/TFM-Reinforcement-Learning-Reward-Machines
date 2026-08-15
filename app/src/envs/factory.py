@@ -28,6 +28,7 @@ def create_environment(
             observation_mode=CONFIG.multitaxi_observation_mode,
             render_mode="rgb_array",
             reward_shaping=CONFIG.multitaxi_reward_shaping,
+            distance_shaping=getattr(CONFIG, "multitaxi_distance_shaping", False),
             non_terminal_reward=CONFIG.multitaxi_non_terminal_reward,
         )
         get_propositions = get_propositions_multi_taxi

@@ -23,20 +23,23 @@ def get_propositions_taxi(env, state, _action, new_state):
     return props
 
 
-def get_propositions_multi_taxi(env, _state, _action, new_state):
+def get_propositions_multi_taxi(env, state, _action, new_state):
     """
-    Evaluates propositions for 2 passengers.
-    p1, p2 = picked up (in taxi)
-    d1, d2 = dropped correctly (at destination)
+    Return pickup and delivery events for passenger state transitions.
+
+    p1, p2 are emitted only when a passenger enters the taxi. d1, d2 are
+    emitted only when a passenger is delivered at its destination.
     """
+    previous = env.unwrapped.decode(state)
     decoded = env.unwrapped.decode(new_state)
     props = []
 
     for i in range(env.unwrapped.num_passengers):
+        previous_location = previous[2 + i * 2]
         passenger_location, destination = decoded[2 + i * 2:4 + i * 2]
-        if passenger_location == 4:
+        if previous_location != 4 and passenger_location == 4:
             props.append(f"p{i + 1}")
-        elif passenger_location == destination:
+        elif previous_location == 4 and passenger_location == destination:
             props.append(f"d{i + 1}")
 
     return props

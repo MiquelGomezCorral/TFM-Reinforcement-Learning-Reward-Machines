@@ -21,12 +21,13 @@ use_crm: false  # Whether to use the CRM or not
 multitaxi_grid_size: 5
 multitaxi_num_passengers: 2
 multitaxi_observation_mode: "discrete"
+multitaxi_reward_shaping: true
 
 # Exploration parameters
 max_epsilon: 1.0  # Exploration probability at start
 min_epsilon: 0.05  # Minimum exploration probability
 decay_rate: 0.0005  # Exponential decay rate for exploration prob
-qtable_learning_starts: 1000
+qtable_learning_starts: 1000  # Random warm-up episodes before epsilon decay
 
 # HRM parameters
 hrm_r_plus: 1

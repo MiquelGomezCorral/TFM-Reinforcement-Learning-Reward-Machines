@@ -15,6 +15,7 @@ use_crm: false
 multitaxi_grid_size: 5
 multitaxi_num_passengers: 2
 multitaxi_observation_mode: "relative"
+multitaxi_reward_shaping: true
 dqn_num_envs: 16
 
 max_epsilon: 1.0

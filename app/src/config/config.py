@@ -53,13 +53,14 @@ class Configuration:
     multitaxi_num_passengers: int = 2
     multitaxi_observation_mode: str = "discrete" # factored, relative
     multitaxi_reward_shaping: bool = True
+    multitaxi_distance_shaping: bool = False
     multitaxi_non_terminal_reward: float = -1.0
 
     # Exploration parameters
     max_epsilon: float = 1.0    # Exploration probability at start
     min_epsilon: float = 0.05   # Minimum exploration probability
     decay_rate: float = 0.0005  # Exponential decay rate for exploration prob
-    qtable_learning_starts: int = 1000
+    qtable_learning_starts: int = 1000  # Random warm-up episodes before epsilon decay
 
     # HRM parameters
     hrm_r_plus: float = 1
@@ -73,10 +74,10 @@ class Configuration:
     dqn_hidden_size: int = 128
     dqn_tau: float = 0.01
     dqn_gradient_clip: float = 10
-    dqn_epsilon_decay_steps: int = 50000
+    dqn_epsilon_decay_steps: int = 50000  # Exponential e-fold transitions after warm-up
     dqn_optimize_interval: int = 4
-    dqn_learning_starts: int = 1000
-    dqn_optimize_starts: int = 1000
+    dqn_learning_starts: int = 1000  # Fully random transitions before epsilon decay
+    dqn_optimize_starts: int = 1000  # Transitions before gradient updates
     dqn_num_envs: int = 1
     dqn_checkpoint_interval: int = 5000
     dqn_validation_episodes: int = 200
