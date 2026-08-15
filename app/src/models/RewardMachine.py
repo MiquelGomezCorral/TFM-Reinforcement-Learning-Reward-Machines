@@ -108,6 +108,7 @@ class RewardMachine:
             ):
                 matches.append((next_u, reward))
 
+        matches = list(dict.fromkeys(matches))
         if len(matches) > 1:
             raise ValueError(f"Ambiguous transitions from RM state {start_u}: {matches}")
         if matches:

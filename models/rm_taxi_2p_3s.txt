@@ -1,0 +1,13 @@
+# Multi-Taxi (2 dassengers)
+# Initial state / Final state / Default reward
+i: 0
+f: 2
+r: -1
+
+# State 0: Both waiting
+0; 1; d1, !d2; 5
+0; 1; !d1, d2; 5
+0; 2; d1, d2; 10
+
+1; 2; d1, !d2; 5
+1; 2; !d1, d2; 5

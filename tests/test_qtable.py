@@ -160,6 +160,49 @@ class QTableTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 machine.simulate_step(0, {"a", "b"})
 
+    def test_reward_machine_deduplicates_identical_transitions(self):
+        with tempfile.TemporaryDirectory() as models_path:
+            Path(models_path, "machine.txt").write_text(
+                "i:0\nf:2\nr:-1\n0;1;a;3\n0;1;a;3\n1;2;z;1\n"
+            )
+            config = SimpleNamespace(MODELS_PATH=models_path)
+            machine = RewardMachine(config, "machine.txt")
+
+            self.assertEqual(machine.simulate_step(0, {"a"}), (1, 3.0, False))
+
+    def test_three_state_multitaxi_rm_requires_both_deliveries(self):
+        models_path = Path(__file__).parents[1] / "models"
+        machine = RewardMachine(
+            SimpleNamespace(MODELS_PATH=models_path),
+            "rm_taxi_2p_3s.txt",
+        )
+
+        self.assertEqual(machine.step({"d1"}), (1, 5.0, False))
+        self.assertEqual(machine.step(set()), (1, -1.0, False))
+        self.assertEqual(machine.step({"d2"}), (2, 5.0, True))
+
+    def test_nine_state_multitaxi_rm_uses_transition_events(self):
+        models_path = Path(__file__).parents[1] / "models"
+        config = SimpleNamespace(MODELS_PATH=models_path)
+        paths = (
+            (({"p1"}, {"p2"}, {"d1"}, {"d2"}), (1, 3, 6, 8)),
+            (({"p2"}, {"p1"}, {"d2"}, {"d1"}), (2, 3, 7, 8)),
+            (({"p1"}, {"d1"}, {"p2"}, {"d2"}), (1, 4, 6, 8)),
+            (({"p2"}, {"d2"}, {"p1"}, {"d1"}), (2, 5, 7, 8)),
+            (({"p1", "p2"}, {"d1", "d2"}), (3, 8)),
+        )
+
+        for events, expected_states in paths:
+            with self.subTest(events=events):
+                machine = RewardMachine(config, "rm_taxi_2p_9s.txt")
+                states = [machine.step(event)[0] for event in events]
+                self.assertEqual(states, list(expected_states))
+                self.assertEqual(machine.get_current_state(), machine.final_state)
+
+        machine = RewardMachine(config, "rm_taxi_2p_9s.txt")
+        self.assertEqual(machine.step({"p1"}), (1, 5.0, False))
+        self.assertEqual(machine.step(set()), (1, -1.0, False))
+
     def test_reward_machine_rejects_non_final_dead_end(self):
         with tempfile.TemporaryDirectory() as models_path:
             Path(models_path, "machine.txt").write_text("i:0\nf:2\n0;1;a;3\n")
@@ -208,7 +251,7 @@ class QTableTest(unittest.TestCase):
             min_epsilon=0,
             max_epsilon=0,
             decay_rate=0,
-            qtable_learning_starts=2,
+            qtable_learning_starts=1,
             gamma=0.9,
             learning_rate=0.1,
             use_crm=False,
