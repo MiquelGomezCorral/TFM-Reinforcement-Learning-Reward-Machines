@@ -1,11 +1,11 @@
-exp_name: "dqn_multitaxi"
-exp_description: "DQN on MultiTaxi"
+exp_name: "dqn_multitaxi_2p"
+exp_description: "DQN on two-passenger MultiTaxi"
 rm_file: "rm_taxi_2p.txt"
 seed: 42
 gym_id: "MultiTaxi-v0"
 video_fps: 10
 
-n_training_episodes: 30000
+n_training_episodes: 100000
 n_eval_episodes: 200
 eval_seed_base: 20260720
 max_steps: 100
@@ -13,7 +13,7 @@ gamma: 0.99
 use_rm: false
 use_crm: false
 multitaxi_grid_size: 5
-multitaxi_num_passengers: 1
+multitaxi_num_passengers: 2
 multitaxi_observation_mode: "relative"
 multitaxi_reward_shaping: true
 multitaxi_distance_shaping: true
@@ -25,7 +25,7 @@ min_epsilon: 0.05
 dqn_batch_size: 128
 dqn_replay_capacity: 50000
 dqn_learning_rate: 0.001
-dqn_hidden_size: 128
+dqn_hidden_size: 256
 dqn_tau: 0.01
 dqn_gradient_clip: 10
 dqn_epsilon_decay_steps: 25000  # Exponential e-fold transitions after warm-up
