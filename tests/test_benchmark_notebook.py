@@ -150,6 +150,9 @@ class BenchmarkNotebookTest(unittest.TestCase):
 
         self.assertNotEqual(first.eval_seed, second.eval_seed)
         self.assertTrue(set(first.eval_seed).isdisjoint(second.eval_seed))
+        self.assertEqual(first.dqn_learning_starts, benchmark.dqn_learning_starts)
+        self.assertEqual(first.dqn_optimize_starts, benchmark.dqn_optimize_starts)
+        self.assertEqual(first.dqn_tau, benchmark.dqn_tau)
 
 
 if __name__ == "__main__":
