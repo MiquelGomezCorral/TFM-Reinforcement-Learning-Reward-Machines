@@ -27,6 +27,8 @@ def create_environment(
             num_passengers=CONFIG.multitaxi_num_passengers,
             observation_mode=CONFIG.multitaxi_observation_mode,
             render_mode="rgb_array",
+            reward_shaping=CONFIG.multitaxi_reward_shaping,
+            non_terminal_reward=CONFIG.multitaxi_non_terminal_reward,
         )
         get_propositions = get_propositions_multi_taxi
     else:

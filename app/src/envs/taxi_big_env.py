@@ -13,11 +13,15 @@ class MultiTaxiEnv(gym.Env):
         num_passengers=2,
         observation_mode="discrete",
         render_mode=None,
+        reward_shaping=True,
+        non_terminal_reward=-1,
     ):
         self.grid_size = grid_size
         self.num_passengers = num_passengers
         self.observation_mode = observation_mode
         self.render_mode = render_mode
+        self.reward_shaping = reward_shaping
+        self.non_terminal_reward = non_terminal_reward
 
         if grid_size == 5:
             self.locs = [(0, 0), (0, 4), (4, 0), (4, 3)]
@@ -28,15 +32,18 @@ class MultiTaxiEnv(gym.Env):
 
         self.state_bounds = [grid_size, grid_size] + [5, 4] * num_passengers
         if observation_mode == "discrete":
+            # The observation space is a single integer representing the state.
             self.observation_space = spaces.Discrete(int(np.prod(self.state_bounds)))
         elif observation_mode == "relative":
+            # The observation space is a continuous vector representing the relative positions of the taxi and passengers.
             self.observation_space = spaces.Box(
-                low=-1.0,
-                high=1.0,
-                shape=(2 + 7 * num_passengers,),
+                low=-(grid_size - 1),
+                high=grid_size - 1,
+                shape=(7 * num_passengers,),
                 dtype=np.float32,
             )
         elif observation_mode == "factored":
+            # The observation space is a concatenation of one-hot encodings for each component of the state.
             self.observation_space = spaces.Box(
                 low=0.0,
                 high=1.0,
@@ -117,6 +124,8 @@ class MultiTaxiEnv(gym.Env):
 
         self.state = [taxi_r, taxi_c] + passengers
         terminated = all(passengers[i*2] == passengers[i*2+1] for i in range(self.num_passengers))
+        if not self.reward_shaping:
+            reward = 50 if terminated else self.non_terminal_reward
         
         raw_state = self.encode(self.state)
         return self._observation(), reward, terminated, False, {
@@ -136,8 +145,7 @@ class MultiTaxiEnv(gym.Env):
             return np.asarray(observation, dtype=np.float32)
 
         taxi_r, taxi_c = self.state[:2]
-        scale = self.grid_size - 1
-        observation = [taxi_r / scale, taxi_c / scale]
+        observation = []
         for i in range(self.num_passengers):
             passenger_location, destination = self.state[2 + i * 2:4 + i * 2]
             destination_r, destination_c = self.locs[destination]
@@ -153,10 +161,10 @@ class MultiTaxiEnv(gym.Env):
                 status = (1.0, 0.0, 0.0)
 
             observation.extend([
-                (passenger_r - taxi_r) / scale,
-                (passenger_c - taxi_c) / scale,
-                (destination_r - taxi_r) / scale,
-                (destination_c - taxi_c) / scale,
+                passenger_r - taxi_r,
+                passenger_c - taxi_c,
+                destination_r - taxi_r,
+                destination_c - taxi_c,
                 *status,
             ])
 

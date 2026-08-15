@@ -51,7 +51,9 @@ class Configuration:
     dynamic_qtable: bool = True
     multitaxi_grid_size: int = 5
     multitaxi_num_passengers: int = 2
-    multitaxi_observation_mode: str = "discrete"
+    multitaxi_observation_mode: str = "discrete" # factored, relative
+    multitaxi_reward_shaping: bool = True
+    multitaxi_non_terminal_reward: float = -1.0
 
     # Exploration parameters
     max_epsilon: float = 1.0    # Exploration probability at start

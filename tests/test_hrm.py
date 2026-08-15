@@ -100,6 +100,8 @@ class HRMTest(unittest.TestCase):
                 multitaxi_grid_size=5,
                 multitaxi_num_passengers=2,
                 multitaxi_observation_mode="discrete",
+                multitaxi_reward_shaping=True,
+                multitaxi_non_terminal_reward=-1,
             )
         )
         model = QTableHRM(config(models_path), env, "rm_taxi_2p.txt")
