@@ -39,8 +39,24 @@ class RewardMachine:
         """Parse RM headers and transition rows into internal state structures."""
         has_initial = False
         has_final = False
+        declared_states = set()
 
         for line in lines:
+            if line.startswith('s:'):
+                values = line.split(':', 1)[1]
+                try:
+                    states = {
+                        int(value.strip())
+                        for value in values.split(',')
+                        if value.strip()
+                    }
+                except ValueError as error:
+                    raise ValueError("Reward Machine states must be integers") from error
+                if not states:
+                    raise ValueError("Reward Machine state declaration cannot be empty")
+                declared_states.update(states)
+                continue
+
             if line.startswith('i:'):
                 if has_initial:
                     continue
@@ -71,6 +87,10 @@ class RewardMachine:
 
         if self.initial_state is None or self.final_state is None:
             raise ValueError("Reward Machine requires initial and final states")
+        if self.final_state in declared_states:
+            raise ValueError("The final state must not be declared as non-final")
+        for state in sorted(declared_states):
+            self.states.setdefault(state, [])
 
     def _validate_targets(self) -> None:
         """Reject referenced non-final states that have no outgoing transitions."""
